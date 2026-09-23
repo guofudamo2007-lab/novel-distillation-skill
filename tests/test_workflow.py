@@ -58,6 +58,100 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(text, "".join(text[c["start"]:c["end"]] for c in chunks))
             self.assertTrue(all(0 < c["end"] - c["start"] <= 64 for c in chunks))
 
+    def test_chinese_act_spaced_and_punctuated_headings(self):
+        titles = ["　　序 章 海港", "序 幕：夜航", "第一幕 海图", "第二幕·返航",
+                  "尾 声", "楔子·远行", "后 记：灯下"]
+        text = "前言\n" + "".join(title + "\n纸灯仍然亮着。\n" for title in titles)
+        chapters, chunks = nd.segments(text, 64, 16)
+        self.assertEqual(["Preamble / unheaded text"] + [s.strip() for s in titles],
+                         [c["title"] for c in chapters])
+        self.assertEqual(text, "".join(text[c["start"]:c["end"]] for c in chunks))
+        for chapter, title in zip(chapters[1:], titles):
+            self.assertEqual(title, text[chapter["start"]:chapter["start"] + len(title)])
+
+    def test_chapter_mentions_in_body_do_not_create_boundaries(self):
+        text = ("第一章 海港\n他说：\n第十六章节里写过这件事。\n"
+                "第二回来的时候，灯已经灭了。\n第二章·夜航\n纸船驶远。\n")
+        chapters, _ = nd.segments(text, 64, 0)
+        self.assertEqual(["第一章 海港", "第二章·夜航"], [c["title"] for c in chapters])
+
+    def test_new_workspace_pins_segmentation_without_changing_source(self):
+        text = "　　序 章 海港\n纸灯亮了。\n第一幕 夜航\n纸灯灭了。\n"
+        self.source.write_text(text, encoding="utf-8")
+        before = self.source.read_bytes()
+        work = self.root / "new-headings"
+        manifest = nd.prepare(self.source, work, "海港", "utf-8", 64, 0)
+        self.assertEqual("2", manifest.get("segmentation_version"))
+        self.assertEqual(2, len(manifest["chapters"]))
+        self.assertEqual(text, nd.workspace(work)[1])
+        self.assertEqual(before, self.source.read_bytes())
+
+    def test_legacy_workspace_keeps_original_boundaries_and_records(self):
+        # v0.1.0 did not recognize acts; a literal old manifest must stay readable.
+        text = "第一幕 海港\n纸灯亮了。\n第二幕 夜航\n纸灯灭了。\n"
+        work = self.root / "legacy-layout"
+        (work / "analyses").mkdir(parents=True)
+        manifest = dict(self.manifest, sha256=nd.digest(text),
+                        source_id=f"src-{nd.digest(text)[:16]}", chunk_chars=64, context_chars=0,
+                        metrics=nd.metrics(text),
+                        chapters=[{"id": "CH0001", "title": "Preamble / unheaded text",
+                                   "start": 0, "end": len(text)}],
+                        chunks=[{"id": "C000001", "chapter_id": "CH0001", "start": 0,
+                                 "end": len(text), "context_start": 0, "context_end": len(text),
+                                 "line_start": 1, "line_end": 4}])
+        manifest.pop("segmentation_version", None)
+        nd.write_text(work / "source.txt", text)
+        nd.write_json(work / "manifest.json", manifest)
+        before = (work / "manifest.json").read_bytes()
+        record = self.record()
+        record["source_sha256"] = manifest["sha256"]
+        record["observations"][0]["evidence"] = [
+            {"start": 7, "end": 12, "quote": "纸灯亮了。", "kind": "support"}]
+        nd.record_analysis(work, record)
+        dna = nd.assemble(work)
+        self.assertEqual(1, dna["sources"][0]["total_chunks"])
+        self.assertEqual("CH0001", dna["evidence"][0]["chapter_id"])
+        self.assertEqual("source-backed", nd.validate(dna, [work])["verification"])
+        self.assertEqual(before, (work / "manifest.json").read_bytes())
+
+    def test_unknown_segmentation_version_is_not_silently_accepted(self):
+        for version in ("999", None, 2):
+            with self.subTest(version=version):
+                manifest = dict(self.manifest, segmentation_version=version)
+                nd.write_json(self.work / "manifest.json", manifest, True)
+                with self.assertRaisesRegex(nd.Error, "segmentation"):
+                    nd.workspace(self.work)
+
+    def test_all_markdown_exports_preserve_review_and_limitations(self):
+        dna = self.dna()
+        dna["review_notes"] = "仅核对已读片段；人物的证词尚未证实。"
+        dna["limitations"] = ["中间场景尚未连续阅读。", "不能用来推断整卷回收效果。"]
+        out = self.root / "bounded-exports"
+        export(dna, out, [self.work], "balanced")
+        for path in out.glob("*.md"):
+            with self.subTest(file=path.name):
+                report = path.read_text(encoding="utf-8")
+                self.assertIn(dna["review_notes"], report)
+                for limitation in dna["limitations"]:
+                    self.assertIn(limitation, report)
+
+    def test_partial_reviewed_export_is_not_presented_as_complete_reading(self):
+        nd.record_analysis(self.work, self.record())
+        dna = nd.assemble(self.work)
+        dna["status"] = "reviewed"
+        dna["review_notes"] = "已审查一个局部样本。"
+        dna["dimensions"]["emotion"].update(status="distilled", summary="局部物件动作。")
+        dna["limitations"] = []  # Export should derive scope from coverage, even if omitted here.
+        out = self.root / "partial-exports"
+        export(dna, out, [self.work], "balanced")
+        for path in out.glob("*.md"):
+            with self.subTest(file=path.name):
+                report = path.read_text(encoding="utf-8")
+                self.assertIn("1/3 chunks", report)
+                self.assertIn("部分覆盖", report)
+                self.assertIn("reviewed", report)
+                self.assertIn(dna["review_notes"], report)
+
     def test_heading_variants_and_preamble(self):
         chapters, _ = nd.segments("前言\nChapter I Start\na\n# 转折\nb\n尾声\nc", 64, 0)
         self.assertEqual(4, len(chapters))

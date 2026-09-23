@@ -20,7 +20,7 @@
 | templates | name、steps、rule_ids；steps 至少两步，描述结构功能而非来源事件 |
 | exclusions / limitations | 机制层禁区与已知限制/缺失；不把未知包装成不存在 |
 
-来源位置信息位于 workspace 的 manifest。start/end 为归一化全文的 Unicode 字符坐标，不是片段局部位置。原文引用最多 240 个字符，范围长度必须与 quote 一致。引用少不是授权充分的证明；公开发布还需用户自行审查材料权限。
+来源位置信息位于 workspace 的 manifest。自工具 v0.1.1 起，manifest 新增 segmentation_version="2"；无此字段的旧工作区继续使用 v1 边界，不重编号。此字段属于工作区，不加入两套 schema_version 1.0 分析 JSON。未知切分版本被拒绝；切换规则须新建工作区，不修改旧 manifest。start/end 为归一化全文的 Unicode 字符坐标，不是片段局部位置。原文引用最多 240 个字符，范围长度必须与 quote 一致。引用少不是授权充分的证明；公开发布还需用户自行审查材料权限。
 
 ## 支持强度与置信度
 
@@ -40,6 +40,6 @@ confidence 为 low/medium/high，是分析者判断，不是校准概率。high 
 
 ## 导出
 
-`export` 写五个新文件：quick-profile.md、deep-analysis.md、novel-dna.json、style-bible.md、writing-constraints.md。Markdown 研究报告默认只列证据坐标，JSON 含短引文。输出目录必须不存在，避免覆写用户文件。
+`export` 写五个新文件：quick-profile.md、deep-analysis.md、novel-dna.json、style-bible.md、writing-constraints.md。Markdown 研究报告默认只列证据坐标，JSON 含短引文。输出目录必须不存在，避免覆写用户文件。四份 Markdown 均附 review_notes 与 limitations，并从 read_chunks/total_chunks 自动判断是否部分覆盖；即使 status=reviewed 或 limitations 为空，也不会把部分阅读标成全文完成。未填写审查或限制时显示未知，不补造分析。文件名 deep-analysis.md 不等于已执行 Deep 全文阅读。
 
 balanced 默认只采纳 recurring/strong；low 仅 strong；exploratory 也含 candidate。脚本按强度过滤，不凭空改变句法比例。候选不足时 constraints 会明确说明暂无合格规则，而不是生成空壳后宣称完成。

@@ -2,7 +2,7 @@
 
 > 将一部长篇小说“蒸馏”为可分析、可复用、可执行的写作系统。
 
-**v0.1.0 · 可运行的 Agent Skill + Python 本地工具链**
+**v0.1.1 · 可运行的 Agent Skill + Python 本地工具链**
 
 不是剧情摘要器，不是模型权重蒸馏，也不是换词仿写器。它让 Agent 从用户提供的原文中抽取证据，再把文笔、文风、叙事、人物与结构提炼为 **Novel DNA**，用于研究、原创写作指导、章节诊断与机制迁移。
 
@@ -27,12 +27,12 @@ Quick Profile / Deep Analysis / Novel DNA / Style Bible / Writing Constraints
 | 能力 | 当前实现 |
 |---|---|
 | 可安装 Skill | 根目录 SKILL.md、渐进式参考文档、agents/openai.yaml |
-| 原文处理 | TXT/Markdown，显式编码，中文/英文/Markdown 标题识别，超长段落安全切分 |
+| 原文处理 | TXT/Markdown，显式编码，支持幕/带空格的序尾声/分隔标题，切分版本兼容旧工作区 |
 | 长篇与续读 | core 无重叠、context 仅辅助理解、每片记录、pending 队列、版本校验 |
 | 11 维蒸馏 | 文风、句法、词汇、叙事、人物、对白、节奏、场景、悬念、情绪、主题母题 |
 | 结构化产物 | 两套 JSON Schema、角色语言指纹、场景/章节模板、风格禁区 |
 | 证据与反例 | 原文位置、短引用逐字校验、来源版本、规则引用、强特征最低支持门槛 |
-| 五类导出 | Quick Profile、Deep Analysis、Novel DNA、Style Bible、Writing Constraints |
+| 五类导出 | Quick Profile、Deep Analysis、Novel DNA、Style Bible、Writing Constraints；Markdown 均保留审查与覆盖边界 |
 | 多小说应用 | 11 维并排对比、维度选源混合、ID 自动隔离、来源保留 |
 | 诊断辅助 | 目标统计、规则检查清单、连续字符重合预警；语义判断由 Agent 完成 |
 | 质量保证 | 标准库 unittest、原创可复现实例、GitHub Actions 配置 |
@@ -104,6 +104,10 @@ python scripts/novel_distill.py assemble workspaces/novel-v1 --out outputs/candi
 python scripts/novel_distill.py validate outputs/novel-dna.json --workspace workspaces/novel-v1
 python scripts/novel_distill.py export outputs/novel-dna.json --workspace workspaces/novel-v1 --out outputs/report
 ```
+
+v0.1.1 的新工作区记录切分版本，已有 v0.1.0 工作区仍按原规则校验，证据和已读记录不会自动迁移。新规则识别“第一幕 夜航”“序 章”“楔子·归途”；中文序号与标题之间需要空白或分隔符，无分隔标题与未标记卷名仍须人工检查。需更新分章时另建工作区，切勿修改旧 manifest。
+
+Quick 抽样先保存各册、位置层、片段与选择理由，区分整章和章内窗口，明确未读范围。详见工作流。
 
 全部子命令可通过 `--help` 查看。数据契约见 [output-contract](references/output-contract.md)，阅读策略见 [workflow](references/workflow.md)。没有 `--workspace` 的 validate 只能检查元数据与内部引用，不能验证原文真实性；带参数的校验仍不能证明文学判断正确。
 

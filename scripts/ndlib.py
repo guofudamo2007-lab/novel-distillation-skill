@@ -10,13 +10,23 @@ import re
 from pathlib import Path
 from typing import Any
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 ROOT = Path(__file__).resolve().parents[1]
 DIMENSIONS = ("style", "syntax", "vocabulary", "narrative", "character", "dialogue",
               "pacing", "scene", "suspense", "emotion", "theme_motif")
-HEADING = re.compile(
+# Preserve v0.1.0 boundaries for manifests without a segmentation version.
+HEADING_V1 = re.compile(
     r"^\s{0,3}(?:#{1,6}\s+\S.*|第[零〇一二三四五六七八九十百千万两\d]+[章节卷部回集].*"
     r"|(?:chapter|part|book)\s+(?:\d+|[ivxlcdm]+)\b.*|(?:序章|楔子|尾声|后记)(?:\s.*)?)$", re.I)
+# Require a separator after a numbered heading so body phrases such as
+# "第十六章节里..." do not split the source. Unmarked ambiguous titles need review.
+HEADING = re.compile(
+    r"^[ \t\u3000]{0,3}(?:#{1,6}\s+\S.*"
+    r"|第[零〇一二三四五六七八九十百千万两\d]+[章节幕卷部回集](?:[ \t\u3000·:：—-]+\S.*|[ \t\u3000]*)"
+    r"|(?:chapter|part|book)\s+(?:\d+|[ivxlcdm]+)\b.*"
+    r"|(?:序[ \t\u3000]*[章幕]|楔[ \t\u3000]*子|尾[ \t\u3000]*声|后[ \t\u3000]*记)"
+    r"(?:[ \t\u3000·:：—-]+\S.*|[ \t\u3000]*))$", re.I)
+SEGMENTATION_VERSION = "2"
 MAX_BYTES = 100 * 1024 * 1024
 
 
@@ -152,14 +162,18 @@ def metrics(text: str) -> dict:
             "quoted_character_ratio_proxy": round(quoted / max(len(text), 1), 5)}
 
 
-def segments(text: str, max_chars: int, context: int) -> tuple[list[dict], list[dict]]:
+def segments(text: str, max_chars: int, context: int, *,
+             version: str = SEGMENTATION_VERSION) -> tuple[list[dict], list[dict]]:
+    if version not in ("1", "2"):
+        raise Error(f"Unsupported segmentation version: {version!r}; use a compatible tool version.")
+    heading = HEADING_V1 if version == "1" else HEADING
     if max_chars < 64 or not 0 <= context <= max_chars // 2:
         raise Error("--chunk-chars must be >=64; context must be between 0 and half the chunk size.")
     starts = [0]
     headings: dict[int, str] = {}
     offset = 0
     for line in text.splitlines(keepends=True):
-        if HEADING.match(line.rstrip("\n")):
+        if heading.match(line.rstrip("\n")):
             headings[offset] = line.strip()
             if offset:
                 starts.append(offset)
@@ -200,7 +214,8 @@ def prepare(source: Path, out: Path, title: str, encoding: str, max_chars: int, 
     text = read_text(source, encoding)
     chapters, chunks = segments(text, max_chars, context)
     fingerprint = digest(text)
-    manifest = {"schema_version": "1.0", "title": title or source.stem,
+    manifest = {"schema_version": "1.0", "segmentation_version": SEGMENTATION_VERSION,
+                "title": title or source.stem,
                 "source_id": f"src-{fingerprint[:16]}", "sha256": fingerprint,
                 "input_name": source.name, "encoding": encoding,
                 "normalization": "BOM removed; CRLF/CR -> LF; no other whitespace normalization",
@@ -226,7 +241,8 @@ def workspace(path: Path) -> tuple[dict, str]:
     if digest(text) != manifest.get("sha256"):
         raise Error("Source snapshot hash mismatch; prepare a fresh workspace for revised text.")
     try:
-        chapters, chunks = segments(text, manifest["chunk_chars"], manifest["context_chars"])
+        chapters, chunks = segments(text, manifest["chunk_chars"], manifest["context_chars"],
+                                    version=manifest.get("segmentation_version", "1"))
     except (KeyError, TypeError) as exc:
         raise Error("Malformed workspace configuration.") from exc
     if chapters != manifest.get("chapters") or chunks != manifest.get("chunks"):

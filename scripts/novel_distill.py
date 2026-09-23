@@ -21,12 +21,20 @@ def export(dna: dict, out: Path, workspaces: list[Path], intensity: str) -> dict
     if out.exists() or out.is_symlink():
         raise Error(f"Export directory already exists: {out}")
     coverage = "; ".join(f"{s['title']}: {len(s['read_chunks'])}/{s['total_chunks']} chunks" for s in dna["sources"])
+    partial = any(len(s["read_chunks"]) < s["total_chunks"] for s in dna["sources"])
+    scope = ("部分覆盖：仅代表已记录片段，不是全书分析。" if partial else
+             "全部片段均已声明记录；这不证明语义理解或文学判断正确。")
+    notes = dna["review_notes"].strip() or "未提供审查说明；不等于已经完成语义审查。"
+    limits = "\n".join(f"- {x}" for x in dna["limitations"]) or "未记录限制；不等于没有限制。"
+    # Every standalone Markdown deliverable must carry the same review boundary.
     header = (f"# {dna['title']}\n\nStatus: {dna['status']} · {verification['verification']}\n\n"
-              f"Coverage: {coverage}\n\n语义结论由分析者负责；校验通过不代表文学判断正确。\n\n")
+              f"Coverage: {coverage}\n\n{scope}\n\n"
+              "reviewed 仅表示分析者声明已审查，不代表全文覆盖或独立验收。\n"
+              "语义结论由分析者负责；校验通过不代表文学判断正确。\n\n"
+              f"## Review Notes\n\n{notes}\n\n## Limitations\n\n{limits}\n\n")
     profile = header + "## Quick Profile\n\n"
     for dim, item in dna["dimensions"].items():
         profile += f"### {dim} [{item['status']}]\n\n{item['summary'] or '尚未形成该维度的结论。'}\n\n"
-    profile += "## Limitations\n\n" + "\n".join(f"- {x}" for x in dna["limitations"]) + "\n"
     evidence = {e["id"]: e for e in dna["evidence"]}
     analysis = header + "## Deep Analysis\n\n"
     for rule in dna["rules"]:

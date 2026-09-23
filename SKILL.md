@@ -3,7 +3,7 @@ name: novel-distillation-skill
 description: 蒸馏指定小说的文笔、文风、叙事结构、角色语言、节奏、悬念与主题，生成带原文证据和反例的 Novel DNA、Style Bible 与写作约束。用于“炼制小说 skill”“提炼写作机制”“多小说混合”“小说对比”“按目标机制诊断或改写章节”。Distill novels into evidence-backed, reusable writing mechanisms. Not for plot-only summaries, model-weight distillation, scraping books, or automatic fine-tuning.
 compatibility: 语义分析需要可读写文件的 LLM Agent；本地辅助脚本需要 Python 3.10+，仅标准库，无网络和 API 密钥需求。
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
 ---
 
 # Novel Distillation Skill
@@ -36,7 +36,7 @@ python "SKILL_ROOT/scripts/novel_distill.py" status "WORK"
 python "SKILL_ROOT/scripts/novel_distill.py" prompt "WORK" --id C000001
 ```
 
-先检查章节识别。脚本识别的是标题边界，卷名、Markdown 小节和目录也可能被识别；不要把这些自动当作独立章节的文学证据。
+先检查章节识别。脚本识别的是标题边界，卷名、Markdown 小节和目录也可能被识别；不要把这些自动当作独立章节的文学证据。新工作区记录切分版本；旧工作区保持原规则与坐标，不能编辑版本字段来升级。需要新分章时另建工作区，不自动迁移已读记录。
 
 读取片段的 core 和前后 context。只统计 core；证据必须从 core 内开始，可延伸到其尾部 context。按全局 Unicode 字符位置标注，引用应短而精确。确认原文后编写符合 chunk-analysis schema 的 JSON；用下面命令验收记录：
 
@@ -46,7 +46,7 @@ python "SKILL_ROOT/scripts/novel_distill.py" record "WORK" --analysis "chunk-res
 
 只有导入了合格记录才计入已分析覆盖率；`prepare`、打开片段或统计完成不代表读过。没有值得记录的风格现象时允许 `observations: []`，但仍需真实的摘要与反例搜索说明。修改记录必须显式传 `--replace`。
 
-Quick：分层读取开头、中段、结尾及不同场景，输出**抽样画像**。Deep：顺序读完全部片段；每次会话结束保存记录，下一次用 `status` 找到 pending。不为节省上下文默默跳过中段；无法读完则明确停在何处。
+Quick：先保存册/卷、位置层、chunk ID 与选择理由的抽样计划，再读取开头、中段、结尾及不同场景，输出**抽样画像**。区分整章和章内窗口、目的性抽样和随机抽样；计划或切分完成不计入已读覆盖。Deep：顺序读完全部片段；每次会话结束保存记录，下一次用 `status` 找到 pending。不为节省上下文默默跳过中段；无法读完则明确停在何处。
 
 ## 2. Distill：从观察变成规则
 
@@ -60,7 +60,7 @@ python "SKILL_ROOT/scripts/novel_distill.py" assemble "WORK" --out "draft-dna.js
 2. 区分全书倾向、角色特征、场景策略和一次性修辞。写清“何时使用 → 具体动作 → 效果 → 例外”，不要停留在“细腻、冷峻、有张力”。
 3. 检查跨章稳定性、冲突与缺失；频次必须有分母和采样口径。不得用修辞印象编造百分比、情绪值、词性比例或角色对白比例。
 4. 补上维度 summary、角色语言指纹、章节/场景模板、风格禁区、limitations；未分析维度保持 unknown，不凑满。
-5. 查反例并记录审查说明。达到门槛的规则才能提升 recurring / strong；门槛是工程质检，不是统计概率。候选可以保留，但必须显式标注。
+5. 区分叙述事实、人物证词、内心活动和说服性台词；人物的反驳也是证据，不能把一句格言当作者立场。角色口吻应按对象和任务比较。查反例并记录审查说明。达到门槛的规则才能提升 recurring / strong；门槛是工程质检，不是统计概率。候选可以保留，但必须显式标注。
 6. 将结果保存为新的 `novel-dna.json`，不要覆盖原文或不可追溯地改写历史记录。
 
 ```sh
