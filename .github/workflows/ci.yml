@@ -1,0 +1,29 @@
+name: Skill and CLI tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.10', '3.13']
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit and integration tests
+        run: python -m unittest discover -s tests -v
+      - name: Reproducible original-story demo
+        run: python examples/run_demo.py --out outputs/ci-demo
+      - name: Source-backed validation
+        run: python scripts/novel_distill.py validate outputs/ci-demo/novel-dna.json --workspace outputs/ci-demo/workspace
+      - name: Compile Python sources
+        run: python -m compileall -q scripts examples tests

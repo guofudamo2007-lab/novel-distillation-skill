@@ -1,0 +1,6 @@
+interface:
+  display_name: "Novel Distillation · 小说蒸馏"
+  short_description: "从小说原文提炼有证据的写作机制、角色语言与结构"
+  default_prompt: "使用 $novel-distillation-skill 蒸馏我提供的小说，保留证据和反例，输出 Novel DNA 与可执行写作约束。"
+policy:
+  allow_implicit_invocation: true

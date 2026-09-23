@@ -2,466 +2,158 @@
 
 > 将一部长篇小说“蒸馏”为可分析、可复用、可执行的写作系统。
 
-Novel Distillation Skill 是一个面向小说分析与创作辅助的 Skill 项目。
+**v0.1.0 · 可运行的 Agent Skill + Python 本地工具链**
 
-它的目标不是简单总结剧情，也不是机械模仿原文，而是对指定小说进行系统化拆解，将其中隐藏的写作规律提炼为一套结构化的 **Novel DNA（小说写作基因）**。
-
-通过对文笔、文风、叙事结构、人物塑造、对白机制、节奏、场景组织、伏笔、情绪曲线等维度进行分析，最终得到一份可以继续用于研究、诊断、创作和改写的“写作模型”。
-
----
-
-## 核心目标
-
-一本小说真正值得提炼的，不只是“讲了什么故事”，更包括：
-
-- 它如何写句子
-- 如何控制节奏
-- 如何安排信息
-- 如何制造悬念
-- 如何塑造角色
-- 如何设计对白
-- 如何建立氛围
-- 如何安排章节
-- 如何埋设与回收伏笔
-- 如何控制情绪强弱
-- 如何形成稳定而独特的整体气质
-
-Novel Distillation Skill 希望把这些隐藏在大量文本中的规律提取出来，并压缩成清晰、结构化、可执行的规则。
-
----
-
-## 工作流程
-
-整个 Skill 计划围绕三个阶段展开：
-
-### 1. Extract · 抽取
-
-从小说文本中提取稳定、重复、具有代表性的写作特征。
-
-重点关注：
-
-- 文风与语言习惯
-- 句法结构
-- 词汇偏好
-- 叙述视角
-- 人物语言
-- 场景结构
-- 节奏变化
-- 情绪变化
-- 信息投放
-- 伏笔与回收
-- 章节组织
-- 主题与母题
-
-### 2. Distill · 蒸馏
-
-将大量零散特征压缩为更高层的写作规律。
-
-例如：
-
-- 典型章节模板
-- 常用场景推进方式
-- 角色出场模式
-- 对白设计规则
-- 悬念制造公式
-- 情绪曲线结构
-- 信息密度变化
-- 描写与对白比例
-- 作者常用与刻意避免的写法
-
-最终形成一套结构化的 **Novel DNA**。
-
-### 3. Apply · 应用
-
-将蒸馏出的规则用于新的任务，例如：
-
-- 分析用户自己的小说
-- 诊断某一章节为什么“不像目标风格”
-- 优化对白
-- 优化叙事节奏
-- 重构章节结构
-- 调整人物语言
-- 生成章节写作指导
-- 生成创作约束
-- 为原创文本提供改写方向
-
-重点是复用“写作机制”，而不是复刻原句。
-
----
-
-## Novel DNA
-
-计划中的 Novel DNA 将至少包含以下维度：
-
-### Style
-
-分析整体文风，包括：
-
-- 冷峻 / 热烈 / 克制 / 华丽 / 简洁
-- 书面感与口语感
-- 描写密度
-- 情绪表达强度
-- 作者是否倾向直接表达或留白
-
-### Syntax
-
-分析句法与节奏：
-
-- 平均句长
-- 长短句切换
-- 断句习惯
-- 标点使用
-- 排比
-- 省略
-- 倒装
-- 重复句式
-- 段落长度
-
-### Vocabulary
-
-提炼词汇指纹：
-
-- 高频动词
-- 高频形容词
-- 高频意象
-- 口头表达
-- 抽象词与具体词比例
-- 特定时代感或地域感
-
-### Narrative
-
-分析叙事方式：
-
-- 第一 / 第三人称
-- 限知程度
-- 镜头距离
-- 信息隐藏方式
-- 叙述顺序
-- 时间跳转
-- 场景切换
-
-### Character
-
-提炼人物塑造方式：
-
-- 角色出场方式
-- 性格暴露机制
-- 人物关系对照
-- 人物弧线
-- 行动与心理的关系
-- 角色之间的功能分工
-
-### Dialogue
-
-建立角色语言模型：
-
-- 句长
-- 语气
-- 口癖
-- 礼貌度
-- 攻击性
-- 信息密度
-- 潜台词
-- 对话节奏
-
-目标之一是避免“所有角色都用同一张嘴说话”。
-
-### Pacing
-
-分析剧情节奏：
-
-- 对白 / 动作 / 描写 / 心理 / 旁白比例
-- 快节奏与慢节奏切换
-- 章节内部节奏
-- 爆点位置
-- 缓冲区
-- 高密度与低密度段落分布
-
-### Scene
-
-分析场景如何运转：
-
-- 如何进入场景
-- 如何建立空间
-- 如何制造变化
-- 如何推进冲突
-- 如何释放信息
-- 如何结束场景
-
-### Suspense
-
-分析悬念与伏笔：
-
-- 伏笔类型
-- 埋设距离
-- 信息差
-- 误导
-- 延迟解释
-- 回收方式
-- 回收强度
-
-### Emotion
-
-分析情绪曲线：
-
-- 情绪基线
-- 情绪上升
-- 情绪爆点
-- 情绪回落
-- 压抑区
-- 缓冲区
-- 章节结尾情绪状态
-
-### Theme & Motif
-
-分析主题与母题：
-
-- 重复出现的意象
-- 色彩
-- 地点
-- 物件
-- 概念
-- 象征
-- 主题表达方式
-
----
-
-## 特色能力
-
-### 章节模板提炼
-
-将小说中反复出现的章节组织方式总结为可复用模板。
-
-例如：
+不是剧情摘要器，不是模型权重蒸馏，也不是换词仿写器。它让 Agent 从用户提供的原文中抽取证据，再把文笔、文风、叙事、人物与结构提炼为 **Novel DNA**，用于研究、原创写作指导、章节诊断与机制迁移。
 
 ```text
-平静开场
-→ 出现异常细节
-→ 人物互动
-→ 信息逐步升级
-→ 冲突或认知变化
-→ 留下新的悬念
+用户提供小说 TXT / Markdown
+        ↓
+Prepare：归一化快照 · 标题/章节切分 · 有界上下文 · 版本哈希
+        ↓
+Extract：Agent 逐片阅读，记录观察、短证据与反例
+        ↓
+Distill：跨章合并机制，区分候选/重复/强特征，复核适用范围
+        ↓
+Validate：结构 · 引用 · 覆盖率 · 原文逐字核对
+        ↓
+Quick Profile / Deep Analysis / Novel DNA / Style Bible / Writing Constraints
+        ↓
+对比 · 按维度混合 · 章节诊断 · 原创改写辅助
 ```
 
-### 角色语言指纹
+## 实现范围
 
-单独为主要角色建立语言档案。
+| 能力 | 当前实现 |
+|---|---|
+| 可安装 Skill | 根目录 SKILL.md、渐进式参考文档、agents/openai.yaml |
+| 原文处理 | TXT/Markdown，显式编码，中文/英文/Markdown 标题识别，超长段落安全切分 |
+| 长篇与续读 | core 无重叠、context 仅辅助理解、每片记录、pending 队列、版本校验 |
+| 11 维蒸馏 | 文风、句法、词汇、叙事、人物、对白、节奏、场景、悬念、情绪、主题母题 |
+| 结构化产物 | 两套 JSON Schema、角色语言指纹、场景/章节模板、风格禁区 |
+| 证据与反例 | 原文位置、短引用逐字校验、来源版本、规则引用、强特征最低支持门槛 |
+| 五类导出 | Quick Profile、Deep Analysis、Novel DNA、Style Bible、Writing Constraints |
+| 多小说应用 | 11 维并排对比、维度选源混合、ID 自动隔离、来源保留 |
+| 诊断辅助 | 目标统计、规则检查清单、连续字符重合预警；语义判断由 Agent 完成 |
+| 质量保证 | 标准库 unittest、原创可复现实例、GitHub Actions 配置 |
 
-不仅分析“他说什么”，更分析：
+**职责边界：** Python 命令不调用任何模型、不联网、不需要 API 密钥。它不会凭关键词自动识别人物情绪、伏笔或“文风相似度”。阅读、解释、蒸馏、冲突处理与改写由运行 Skill 的 Agent 完成。宿主模型本身仍可能接收原文内容，不应把整个工作流描述为完全离线。
 
-- 他通常说多长
-- 会不会解释自己
-- 是否主动暴露情绪
-- 是否喜欢反问
-- 是否喜欢讽刺
-- 是否习惯省略主语
-- 是否使用特定词汇
-- 面对不同角色时语言是否变化
+## 安装与调用
 
-### 风格禁区
+需要 Python **3.10+**，无需 `pip install`。`python` 不可用时使用系统对应的 `python3` 或 Windows `py -3`。
 
-除了总结“应该怎么写”，还记录：
+### 安装到 Codex 当前项目
 
-> 这部小说通常不会怎么写。
+在准备使用 Skill 的项目根目录执行：
 
-例如：
+```sh
+git clone https://github.com/guofudamo2007-lab/novel-distillation-skill.git .agents/skills/novel-distillation-skill
+```
 
-- 不直接解释人物情绪
-- 不连续堆砌形容词
-- 不让角色突然承担作者旁白功能
-- 不频繁进行设定说明
-- 不使用过于现代的网络口语
-- 不在高潮前提前解释答案
+也可将整个 Skill 目录放到用户级 `~/.agents/skills/novel-distillation-skill`。不要只复制 SKILL.md：scripts、assets、references 都需要保留。安装路径与发现方式参见 [Codex 官方 Skill 文档](https://developers.openai.com/codex/skills/)；格式参见 [Agent Skills 规范](https://agentskills.io/specification)。其他支持 Agent Skills 的宿主按其安装方式使用，尚未逐个宿主做运行认证。
 
-这些“负规则”通常比单纯的模仿特征更加稳定。
-
-### 证据链
-
-重要结论应尽可能保留来源依据。
-
-每一条蒸馏规则可以关联：
-
-- 来源章节
-- 代表性场景
-- 特征出现频率
-- 是否属于强特征
-- 是否存在反例
-
-目标是减少模型仅凭“感觉”判断文风的情况。
-
-### 多小说混合蒸馏
-
-未来可以允许多个来源分别承担不同维度。
-
-例如：
+然后直接对 Agent 说：
 
 ```text
-小说 A → 结构
-小说 B → 对白
-小说 C → 氛围
-小说 D → 人物关系
+使用 $novel-distillation-skill。
+对当前项目 data/小说.txt 做 Deep 蒸馏，工作目录 workspaces/小说-v1。
+提炼文风、结构、角色语言和情绪机制，不要只概括剧情。
+保留证据、反例和已读覆盖率。完成语义归纳后进行 source-backed 校验，
+输出 Novel DNA、Style Bible 和 balanced 写作约束。
+不要修改原文，不要把原文或分析工作目录上传到仓库。
 ```
 
-最终组合为一个新的创作配置。
+任务路径以你实际文件为准。只有书名没有原文时，Skill 不会冒充已经读过该书。
 
-### 小说对比
+## 先运行原创样例
 
-可以比较两部或多部小说在同一维度上的差异：
+下面命令从本仓库根目录执行。样例使用仓库自写的三章短篇和**明确人工标注**的观察，不调用 LLM，也不假装在测试模型文学能力。
 
-- 角色出场
-- 对话节奏
-- 章节结构
-- 悬念
-- 战斗描写
-- 感情线
-- 世界观投放
-- 文风
-- 情绪控制
+```sh
+python examples/run_demo.py --out outputs/demo
+python scripts/novel_distill.py validate outputs/demo/novel-dna.json --workspace outputs/demo/workspace
+python -m unittest discover -s tests -v
+```
 
-### 反向诊断
+样例生成六处证据、两条跨章规则，只有 emotion/dialogue 两维被蒸馏，其余九维如实保留 unknown。`outputs/demo/exports/` 中有五类交付文件。重复执行时换一个输出目录，避免覆盖。
 
-输入用户自己的章节后，可以使用已经蒸馏出的 Novel DNA 进行检查。
+## 完整命令流程
 
-例如：
+```sh
+# 1. 只做原文准备，不声称完成分析
+python scripts/novel_distill.py prepare data/novel.txt --out workspaces/novel-v1 --title "目标小说"
+
+# 非 UTF-8 原文需显式指定编码；不要静默乱码继续分析
+# python scripts/novel_distill.py prepare data/novel.txt --encoding gb18030 --out workspaces/novel-v1
+
+# 2. 检查章节识别、阅读进度和待处理片段
+python scripts/novel_distill.py status workspaces/novel-v1
+python scripts/novel_distill.py chunk workspaces/novel-v1 --id C000001
+python scripts/novel_distill.py prompt workspaces/novel-v1 --id C000001
+
+# 3. Agent 阅读后产出符合 schema 的 chunk-result.json，再逐字校验并记录
+python scripts/novel_distill.py record workspaces/novel-v1 --analysis chunk-result.json
+# 修订已记录的片段时显式加 --replace；其他命令不覆盖已有输出
+
+# 4. 组装候选记录；这一步不是语义蒸馏
+python scripts/novel_distill.py assemble workspaces/novel-v1 --out outputs/candidate-dna.json
+
+# 5. Agent 按 SKILL.md 做跨章归纳/反例审查，另存 outputs/novel-dna.json
+# 然后校验、导出
+python scripts/novel_distill.py validate outputs/novel-dna.json --workspace workspaces/novel-v1
+python scripts/novel_distill.py export outputs/novel-dna.json --workspace workspaces/novel-v1 --out outputs/report
+```
+
+全部子命令可通过 `--help` 查看。数据契约见 [output-contract](references/output-contract.md)，阅读策略见 [workflow](references/workflow.md)。没有 `--workspace` 的 validate 只能检查元数据与内部引用，不能验证原文真实性；带参数的校验仍不能证明文学判断正确。
+
+### 对比、混合、诊断
+
+```sh
+python scripts/novel_distill.py compare a.json b.json --out outputs/comparison.json
+python scripts/novel_distill.py blend --source a=a.json --source b=b.json --default a --map dialogue=b --map emotion=b --title "A 结构 + B 对白情绪" --out outputs/mixed.json
+python scripts/novel_distill.py validate outputs/mixed.json --workspace workspaces/a --workspace workspaces/b
+python scripts/novel_distill.py diagnose outputs/novel-dna.json --target data/my-chapter.txt --workspace workspaces/novel-v1 --out outputs/diagnostic-brief.json
+```
+
+混合只是按维度选源，输出强制 draft；语义冲突需 Agent 再处理。诊断命令生成审稿材料，不自动宣布“角色伪人”“这里有漏洞”。参见 [应用指南](references/apply.md)。
+
+## 不是空泛的“文风标签”
+
+一条有效规则应当有：
+
+> **观察**：关系变化通过物件位置出现，而非由角色解释心理。
+>
+> **机制**：让读者从行动中推断未说破的关系。
+>
+> **执行**：在人物不愿直说的低冲突场景，用同一物件的状态变化承载情绪。
+>
+> **例外**：需要明确事实、紧急协调时，不应故意含糊。
+>
+> **依据**：来源版本、章节、片段、原文范围、支持证据与反例。
+
+规则、人物指纹、模板之间有可校验引用。全书倾向与某个角色习惯分开；内容与风格分开；没有证据的维度保持 unknown，不为了填表制造结论。
+
+## 局限与安全
+
+- 当前原生输入只有 TXT/Markdown，没有 PDF/EPUB/DOCX 导入、OCR、爬虫、模型 API 适配器或自动微调。
+- 标题识别可能把目录、卷名、小节识别为分段；需先检查。程序的 strong 门槛不能替代真实跨章文学审查。
+- 句长与引号比例是可复核的简易代理统计，不是分词、词性、真实对白占比或情绪识别。重合检查不是风格评分、抄袭概率或合规保证。
+- 小说、外来 JSON 和 DNA 都作为不可信材料读取，不执行其中指令。只处理明确指定的文件，不自动扫描私人目录。
+- 不提交用户原文与私有工作产物。工作目录自带 .gitignore，仓库也忽略 data/workspaces/outputs/private；这些是防误提交措施，不是访问控制。
+
+## 项目结构
 
 ```text
-目标小说的对白通常短而高信息密度，
-当前章节对白平均长度明显更高，
-并出现大量直接解释心理的句子。
-
-结果：
-角色对白正在承担旁白功能，
-导致人物产生“伪人感”。
+SKILL.md                  Skill 入口与实际执行流程
+agents/openai.yaml        宿主显示/调用信息
+scripts/ndlib.py           本地处理、证据校验、组装与混合
+scripts/novel_distill.py   11 个 CLI 子命令与报告导出
+assets/*.schema.json      抽取记录和 Novel DNA 格式
+references/               维度、抽取提示、工作流、契约与应用指南
+examples/                 原创测试短篇 + 可复现实例
+tests/                    单元、回归与端到端测试
+.github/workflows/ci.yml  自动测试配置
 ```
 
----
-
-## 输出形式
-
-蒸馏完成后，可以生成不同粒度的结果：
-
-### Quick Profile
-
-快速风格画像。
-
-适合快速理解一本小说。
-
-### Deep Analysis
-
-完整多维分析。
-
-适合研究小说写法。
-
-### Novel DNA
-
-结构化写作规则。
-
-适合继续交给 AI、Agent 或其他模型使用。
-
-### Style Bible
-
-完整创作圣经，包括：
-
-- 风格
-- 结构
-- 角色
-- 对白
-- 节奏
-- 场景
-- 情绪
-- 禁区
-- 示例模式
-- 创作规则
-
-### Writing Constraints
-
-压缩后的写作约束。
-
-用于直接作为后续创作模型的上下文。
-
----
-
-## 设计原则
-
-### 提炼机制，而不是复制句子
-
-重点研究：
-
-> 为什么这种写法有效？
-
-而不是：
-
-> 怎么把原文换几个词再写一遍？
-
-### 区分强特征与偶然特征
-
-一次出现的写法不代表作者风格。
-
-Skill 应尽量判断：
-
-- 出现频率
-- 跨章节稳定性
-- 是否属于特定角色
-- 是否只在特定场景出现
-
-### 内容与风格分离
-
-小说中的：
-
-- 人名
-- 地名
-- 世界观专有名词
-- 具体剧情
-- 原句
-
-不应被误认为风格本身。
-
-真正需要留下的是更抽象的写作机制。
-
-### 不把分析写成读后感
-
-最终结果应该尽量：
-
-- 可量化
-- 可验证
-- 可引用
-- 可执行
-- 可继续用于 Agent / LLM
-
-而不是只输出：
-
-> “作者的文风很细腻，人物描写很生动。”
-
----
-
-## 项目愿景
-
-Novel Distillation Skill 最终希望完成一件事：
-
-> 将一本几十万字甚至数百万字的小说，压缩成一套仍然保留其核心写作规律的“创作模型”。
-
-它既可以成为小说研究工具，也可以成为 AI 辅助写作工作流中的中间层。
-
-未来，一个完整流程可以是：
-
-```text
-小说原文
-   ↓
-Novel Distillation Skill
-   ↓
-Novel DNA
-   ↓
-Style Bible / Writing Constraints
-   ↓
-小说分析 / 创作诊断 / 原创写作辅助
-```
-
----
-
-## 当前状态
-
-🚧 **项目处于早期设计阶段。**
-
-当前仅建立项目定位与功能规划。
-
-Skill 本体、分析流程、数据格式、Prompt、脚本与具体实现尚未开始开发。
+项目尚未设置许可证，由仓库所有者选择。贡献时只加入有权提交的代码和原创/授权测试材料。
