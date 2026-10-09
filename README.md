@@ -2,7 +2,7 @@
 
 > 将一部长篇小说“蒸馏”为可分析、可复用、可执行的写作系统。
 
-**v0.1.1 · 可运行的 Agent Skill + Python 本地工具链**
+**v0.2.0 · 可运行的 Agent Skill + Python 本地工具链**
 
 不是剧情摘要器，不是模型权重蒸馏，也不是换词仿写器。它让 Agent 从用户提供的原文中抽取证据，再把文笔、文风、叙事、人物与结构提炼为 **Novel DNA**，用于研究、原创写作指导、章节诊断与机制迁移。
 
@@ -30,12 +30,16 @@ Quick Profile / Deep Analysis / Novel DNA / Style Bible / Writing Constraints
 | 原文处理 | TXT/Markdown，显式编码，支持幕/带空格的序尾声/分隔标题，切分版本兼容旧工作区 |
 | 长篇与续读 | core 无重叠、context 仅辅助理解、每片记录、pending 队列、版本校验 |
 | 11 维蒸馏 | 文风、句法、词汇、叙事、人物、对白、节奏、场景、悬念、情绪、主题母题 |
-| 结构化产物 | 两套 JSON Schema、角色语言指纹、场景/章节模板、风格禁区 |
+| 结构化产物 | 四套 JSON Schema、角色语言指纹、场景/章节模板、风格禁区；DNA 1.1 兼容旧 1.0 |
+| 跨章阅读记忆 | 带证据的人物状态、时间线与伏笔阶段；追加记录、推测区分、提示前文有界检索 |
+| 逐条规则审查 | 实际检查片段、反例搜索、角色/叙述归属、替代解释与决定；新版升格前要求审查 |
+| 阅读辅助 | 精确引用定位、重复句候选、待填记录模板、明确未验证的轻量进度 |
+| 写作配方 | 为具体任务选择 1..5 条规则，Agent 补事实锁、步骤、原创示例与检查清单 |
 | 证据与反例 | 原文位置、短引用逐字校验、来源版本、规则引用、强特征最低支持门槛 |
 | 五类导出 | Quick Profile、Deep Analysis、Novel DNA、Style Bible、Writing Constraints；Markdown 均保留审查与覆盖边界 |
 | 多小说应用 | 11 维并排对比、维度选源混合、ID 自动隔离、来源保留 |
 | 诊断辅助 | 目标统计、规则检查清单、连续字符重合预警；语义判断由 Agent 完成 |
-| 质量保证 | 标准库 unittest、原创可复现实例、GitHub Actions 配置 |
+| 质量保证 | 标准库 unittest、原创可复现实例、15 项人工评测材料与保留章节、GitHub Actions 配置 |
 
 **职责边界：** Python 命令不调用任何模型、不联网、不需要 API 密钥。它不会凭关键词自动识别人物情绪、伏笔或“文风相似度”。阅读、解释、蒸馏、冲突处理与改写由运行 Skill 的 Agent 完成。宿主模型本身仍可能接收原文内容，不应把整个工作流描述为完全离线。
 
@@ -77,6 +81,35 @@ python -m unittest discover -s tests -v
 ```
 
 样例生成六处证据、两条跨章规则，只有 emotion/dialogue 两维被蒸馏，其余九维如实保留 unknown。`outputs/demo/exports/` 中有五类交付文件。重复执行时换一个输出目录，避免覆盖。
+
+样例另外保存逐条规则审查、一条带证据的阅读记忆和人工完成的原创修车场景写作配方。可验证配方或准备独立的文学判断评测材料：
+
+```sh
+python scripts/novel_distill.py recipe-check outputs/demo/writing-recipe.json --dna outputs/demo/novel-dna.json --workspace outputs/demo/workspace
+python examples/run_evaluation.py --out outputs/evaluation-session
+```
+
+评测材料覆盖 11 个维度、同一角色面对不同对象、人物证词冲突、伏笔与第四章反例。先冻结前三章 DNA，再开放第四章；Agent 不提前读 evaluator-gold.json。准备材料的命令仅核对人工证据位置，不测试模型文学能力。详见 [评测流程](references/evaluation.md)。
+
+### v0.2.0 阅读辅助
+
+```sh
+# Agent 先生成待填模板、阅读，再定位短引文；模板不是分析结果
+python scripts/novel_distill.py record-template workspaces/novel-v1 --id C000001 --out chunk-result.json
+python scripts/novel_distill.py locate workspaces/novel-v1 --id C000001 --quote "准确的短原句"
+
+# 片段 record 后才能追加带证据的阅读记忆
+python scripts/novel_distill.py memory-record workspaces/novel-v1 --entry memory-entry.json
+python scripts/novel_distill.py prompt workspaces/novel-v1 --id C000002 --memory-subject "角色或线索名称"
+
+# 文件存在进度，用于安排续读；报告覆盖率前仍运行完整 status
+python scripts/novel_distill.py status workspaces/novel-v1 --quick
+
+# Agent 按任务选择规则并完成草稿，recipe 不自动生成文学示例
+python scripts/novel_distill.py recipe outputs/demo/novel-dna.json --task "两人久别重逢" --rule R-emotion --rule R-dialogue --workspace outputs/demo/workspace --out outputs/recipe-draft.json
+```
+
+跨章记忆有字符预算、条数限制和 omitted 提示；按 subject 补查遗漏的关键人物或线索。新版 DNA 每条规则包含 review，recurring/strong 和整体 reviewed 需要逐条审查声明。旧工作区与旧 DNA 保持可读，旧 DNA 明确标记 legacy-unstructured，不自动宣称符合新审查。详见 [阅读辅助](references/reading-aids.md)、[数据契约](references/output-contract.md) 和 [配方流程](references/apply.md)。
 
 ## 完整命令流程
 
@@ -152,7 +185,8 @@ python scripts/novel_distill.py diagnose outputs/novel-dna.json --target data/my
 SKILL.md                  Skill 入口与实际执行流程
 agents/openai.yaml        宿主显示/调用信息
 scripts/ndlib.py           本地处理、证据校验、组装与混合
-scripts/novel_distill.py   11 个 CLI 子命令与报告导出
+scripts/novel_distill.py   17 个 CLI 子命令与报告导出
+scripts/ndtools.py         引用定位、阅读记忆、轻量进度与写作配方
 assets/*.schema.json      抽取记录和 Novel DNA 格式
 references/               维度、抽取提示、工作流、契约与应用指南
 examples/                 原创测试短篇 + 可复现实例

@@ -140,6 +140,12 @@ class WorkflowTests(unittest.TestCase):
         dna = nd.assemble(self.work)
         dna["status"] = "reviewed"
         dna["review_notes"] = "已审查一个局部样本。"
+        dna["rules"][0]["review"] = {"status": "reviewed", "checked_sources": [
+            {"source_id": self.manifest["source_id"], "chunk_ids": ["C000001"]}],
+            "counterexample_search": "检查首片段，未见直接解释情绪的句子。",
+            "attribution": "仅描述当前叙述中的物件动作。",
+            "alternative_explanations": "也可能只是日常动作，证据不足以外推。",
+            "decision": "保留 candidate，其他章节仍未读。"}
         dna["dimensions"]["emotion"].update(status="distilled", summary="局部物件动作。")
         dna["limitations"] = []  # Export should derive scope from coverage, even if omitted here.
         out = self.root / "partial-exports"

@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "writing-recipe",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": [
+        "1.0"
+      ]
+    },
+    "dna_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "reviewed"
+      ]
+    },
+    "task": {
+      "type": "string",
+      "minLength": 1
+    },
+    "intensity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "balanced",
+        "exploratory"
+      ]
+    },
+    "rule_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "maxItems": 5,
+      "uniqueItems": true
+    },
+    "facts_to_preserve": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "action": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "rule_id",
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "original_example": {
+      "type": "string"
+    },
+    "review_notes": {
+      "type": "string"
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "source_validation": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "verification": {
+          "type": "string",
+          "enum": [
+            "source-backed",
+            "metadata-only"
+          ]
+        },
+        "semantic_correctness": {
+          "type": "string",
+          "enum": [
+            "not machine-verified"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "reviewed"
+          ]
+        },
+        "rule_review": {
+          "type": "string",
+          "enum": [
+            "structured-declaration",
+            "legacy-unstructured"
+          ]
+        },
+        "rules": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coverage": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "source_id",
+              "read",
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "valid",
+        "verification",
+        "semantic_correctness",
+        "status",
+        "rule_review",
+        "rules",
+        "evidence",
+        "coverage"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "dna_sha256",
+    "status",
+    "task",
+    "intensity",
+    "rule_ids",
+    "facts_to_preserve",
+    "steps",
+    "original_example",
+    "review_notes",
+    "checklist",
+    "source_validation"
+  ],
+  "additionalProperties": false
+}
