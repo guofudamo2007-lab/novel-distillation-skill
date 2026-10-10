@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from ndlib import Error, assemble, prepare, record_analysis, validate, workspace, write_json
 from novel_distill import export
+from ndtools import check_recipe, locate_quote, make_recipe, record_memory, reading_memory
 
 QUOTES = [
     ("她没有回头。他把另一只空杯推回柜子深处。", "“还有热水吗？”\n“壶在你身后。”"),
@@ -52,6 +53,12 @@ def make_demo(out: Path) -> dict:
         rule["id"] = "R-" + dimension
         rule["evidence_ids"] = [e for candidate in candidates for e in candidate["evidence_ids"]]
         rule["strength"], rule["confidence"] = "strong", "high"
+        rule["review"] = {"status": "reviewed", "checked_sources": [
+            {"source_id": manifest["source_id"], "chunk_ids": [c["id"] for c in manifest["chunks"]]}],
+            "counterexample_search": "人工检查三章；未见直接解释关系的反例，不外推到其他作品。",
+            "attribution": "对白规则属于周闻面对关系追问时的回应；物件规则属于叙事呈现。",
+            "alternative_explanations": "杯子也可承担生活细节功能；本样例将位置改变与关系进展并置。",
+            "decision": "仅在此三章样例的低冲突关系场景保留 strong；不声称作者独有或长篇泛化。"}
         distilled.append(rule)
         dna["dimensions"][dimension] = {"status": "distilled", "summary": rule["observation"], "rule_ids": [rule["id"]]}
     dna["rules"] = distilled
@@ -66,6 +73,19 @@ def make_demo(out: Path) -> dict:
     checked = validate(dna, [work])
     write_json(out / "novel-dna.json", dna)
     export(dna, out / "exports", [work], "balanced")
+    match = locate_quote(work, QUOTES[0][0], "C000001")["matches"][0]
+    record_memory(work, {"schema_version": "1.0", "source_sha256": manifest["sha256"],
+        "id": "M000001", "kind": "character", "subject": "周闻", "stage": "state",
+        "certainty": "observed", "summary": "把空杯推回柜子；未明说关系原因。", "related_ids": [],
+        "evidence": [{k: match[k] for k in ("chunk_id", "start", "end", "quote")}]})
+    write_json(out / "memory-before-chapter2.json", reading_memory(work, "C000002"))
+    recipe = make_recipe(dna, "写一场两人久别重逢、都不愿直说的原创场景", ["R-emotion", "R-dialogue"], "balanced", [work])
+    recipe["facts_to_preserve"] = ["两人曾共修自行车；重逢在修车铺；此时不解释离开的原因。"]
+    recipe["original_example"] = "她停在卷帘门外。他从钉板上取下第二把扳手，放到空凳旁。\n‘还修车吗？’\n‘后轮没装。’"
+    recipe["review_notes"] = "仓库作者人工示范：换用原创修车情境，只使用物件行动与回避型回答两项机制。"
+    recipe["status"] = "reviewed"
+    check_recipe(recipe, dna, [work])
+    write_json(out / "writing-recipe.json", recipe)
     return checked
 
 

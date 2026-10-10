@@ -25,5 +25,9 @@ jobs:
         run: python examples/run_demo.py --out outputs/ci-demo
       - name: Source-backed validation
         run: python scripts/novel_distill.py validate outputs/ci-demo/novel-dna.json --workspace outputs/ci-demo/workspace
+      - name: Completed writing recipe validation
+        run: python scripts/novel_distill.py recipe-check outputs/ci-demo/writing-recipe.json --dna outputs/ci-demo/novel-dna.json --workspace outputs/ci-demo/workspace
+      - name: Original evaluation materials and gold quote locations
+        run: python examples/run_evaluation.py --out outputs/ci-evaluation
       - name: Compile Python sources
         run: python -m compileall -q scripts examples tests

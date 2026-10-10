@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-VERSION = "0.1.1"
+VERSION = "0.2.0"
 ROOT = Path(__file__).resolve().parents[1]
 DIMENSIONS = ("style", "syntax", "vocabulary", "narrative", "character", "dialogue",
               "pacing", "scene", "suspense", "emotion", "theme_motif")
@@ -122,6 +122,8 @@ def schema_errors(value: Any, schema: dict, at: str = "$") -> list[str]:
     if isinstance(value, list):
         if len(value) < schema.get("minItems", 0):
             errors.append(f"{at}: too few items")
+        if len(value) > schema.get("maxItems", len(value)):
+            errors.append(f"{at}: too many items")
         if schema.get("uniqueItems"):
             encoded = [json.dumps(x, sort_keys=True, ensure_ascii=False) for x in value]
             if len(set(encoded)) != len(encoded):
@@ -292,7 +294,7 @@ def record_analysis(path: Path, record: dict, replace: bool = False) -> dict:
 
 def assemble(path: Path, title: str = "") -> dict:
     manifest, text = workspace(path)
-    dna = {"schema_version": "1.0", "title": title or manifest["title"], "status": "draft",
+    dna = {"schema_version": "1.1", "title": title or manifest["title"], "status": "draft",
            "review_notes": "", "sources": [{"id": manifest["source_id"], "title": manifest["title"],
            "sha256": manifest["sha256"], "total_characters": len(text),
            "total_chapters": len(manifest["chapters"]), "total_chunks": len(manifest["chunks"]),
@@ -315,7 +317,7 @@ def assemble(path: Path, title: str = "") -> dict:
         for observation in record["observations"]:
             rule = {k: observation[k] for k in ("dimension", "observation", "mechanism", "instruction", "scope", "exceptions")}
             rule.update({"id": f"R{len(dna['rules']) + 1:04d}", "strength": "candidate", "confidence": "low",
-                         "evidence_ids": [], "counterevidence_ids": []})
+                         "evidence_ids": [], "counterevidence_ids": [], "review": pending_review()})
             for span in observation["evidence"]:
                 key = (span["start"], span["end"], span["kind"])
                 if key not in evidence_map:
@@ -332,6 +334,41 @@ def assemble(path: Path, title: str = "") -> dict:
         dna["limitations"].append("Only a subset of chunks has recorded analysis; do not claim full-book coverage.")
     validate(dna, [path])
     return dna
+
+
+def pending_review() -> dict:
+    return {"status": "pending", "checked_sources": [], "counterexample_search": "",
+            "attribution": "", "alternative_explanations": "", "decision": ""}
+
+
+def check_rule_review(rule: dict, dna: dict, sources: dict, evidence: dict) -> list[str]:
+    errors = []
+    review = rule.get("review")
+    required = dna["schema_version"] == "1.1"
+    if review is None:
+        return [f"{rule['id']}: schema 1.1 requires a per-rule review"] if required else []
+    if review["status"] != "reviewed":
+        if required and (rule["strength"] != "candidate" or dna["status"] == "reviewed"):
+            errors.append(f"{rule['id']}: promotion/reviewed DNA requires a reviewed per-rule declaration")
+    else:
+        for field in ("counterexample_search", "attribution", "alternative_explanations", "decision"):
+            if not review[field].strip():
+                errors.append(f"{rule['id']}: reviewed rule needs {field}")
+    checked = {}
+    for item in review["checked_sources"]:
+        sid = item["source_id"]
+        if sid in checked:
+            errors.append(f"{rule['id']}: duplicate reviewed source {sid}")
+        checked[sid] = set(item["chunk_ids"])
+        if sid not in sources or not checked[sid] <= set(sources[sid]["read_chunks"]):
+            errors.append(f"{rule['id']}: review refers to unknown/unread chunks")
+    if review["status"] == "reviewed" and not checked:
+        errors.append(f"{rule['id']}: reviewed rule needs checked source chunks")
+    for eid in rule["evidence_ids"] + rule["counterevidence_ids"]:
+        item = evidence.get(eid)
+        if review["status"] == "reviewed" and item and item["chunk_id"] not in checked.get(item["source_id"], set()):
+            errors.append(f"{rule['id']}: review does not cover evidence {eid}")
+    return errors
 
 
 def validate(dna: dict, workspaces: list[Path] | None = None) -> dict:
@@ -417,6 +454,7 @@ def validate(dna: dict, workspaces: list[Path] | None = None) -> dict:
     if set(dimension_refs) != set(rules) or len(dimension_refs) != len(rules):
         errors.append("Every rule must belong to exactly one matching dimension")
     for rule in rules.values():
+        errors.extend(check_rule_review(rule, dna, sources, evidence))
         for field, kind in (("evidence_ids", "support"), ("counterevidence_ids", "counter")):
             for evidence_id in rule[field]:
                 if evidence_id not in evidence or evidence[evidence_id]["kind"] != kind:
@@ -442,6 +480,7 @@ def validate(dna: dict, workspaces: list[Path] | None = None) -> dict:
         raise Error("\n".join(errors[:40]))
     return {"valid": True, "verification": "source-backed" if workspaces else "metadata-only",
             "semantic_correctness": "not machine-verified", "status": dna["status"],
+            "rule_review": "structured-declaration" if dna["schema_version"] == "1.1" else "legacy-unstructured",
             "rules": len(rules), "evidence": len(evidence),
             "coverage": [{"source_id": s["id"], "read": len(s["read_chunks"]),
                           "total": s["total_chunks"]} for s in sources.values()]}
@@ -454,7 +493,9 @@ def blend(inputs: dict[str, dict], mapping: dict[str, str], default: str, title:
         if not re.fullmatch(r"[a-z][a-z0-9_-]*", alias):
             raise Error("Use simple lowercase source aliases, such as a or dialogue_source.")
         validate(dna)
-    result = {"schema_version": "1.0", "title": title, "status": "draft", "review_notes": "",
+    # Keep legacy input readable; mixed-version output must explicitly be reviewed again.
+    modern = all(dna["schema_version"] == "1.1" for dna in inputs.values())
+    result = {"schema_version": "1.1" if modern else "1.0", "title": title, "status": "draft", "review_notes": "",
               "sources": [], "dimensions": {}, "rules": [], "evidence": [], "characters": [],
               "templates": [], "exclusions": [], "limitations": [
               "Mixed DNA: resolve incompatible rules before use; dimension selection is not semantic fusion."]}
@@ -475,6 +516,9 @@ def blend(inputs: dict[str, dict], mapping: dict[str, str], default: str, title:
                 continue
             rule = copy.deepcopy(original)
             rule["id"] = prefix(rule["id"])
+            if "review" in rule:
+                for item in rule["review"]["checked_sources"]:
+                    item["source_id"] = prefix(item["source_id"])
             for field in ("evidence_ids", "counterevidence_ids"):
                 used_evidence.update(rule[field])
                 rule[field] = list(map(prefix, rule[field]))
