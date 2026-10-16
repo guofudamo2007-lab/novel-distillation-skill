@@ -2,7 +2,7 @@
 
 > 将一部长篇小说“蒸馏”为可分析、可复用、可执行的写作系统。
 
-**v0.2.0 · 可运行的 Agent Skill + Python 本地工具链**
+**v0.3.0 · Grok Build / Antigravity / Codex / 通用 Agent Skill + Python 本地工具链**
 
 不是剧情摘要器，不是模型权重蒸馏，也不是换词仿写器。它让 Agent 从用户提供的原文中抽取证据，再把文笔、文风、叙事、人物与结构提炼为 **Novel DNA**，用于研究、原创写作指导、章节诊断与机制迁移。
 
@@ -27,6 +27,8 @@ Quick Profile / Deep Analysis / Novel DNA / Style Bible / Writing Constraints
 | 能力 | 当前实现 |
 |---|---|
 | 可安装 Skill | 根目录 SKILL.md、渐进式参考文档、agents/openai.yaml |
+| 宿主适配 | Grok Build CLI、Antigravity IDE/app/CLI、Codex 的目录配置；通用路径入口、离线安装/诊断/打包 |
+| 跨模型交接 | 显式导入单层 JSON 代码围栏、引文文件避免 shell 转义、沿用同一工作区续读；原校验不变 |
 | 原文处理 | TXT/Markdown，显式编码，支持幕/带空格的序尾声/分隔标题，切分版本兼容旧工作区 |
 | 长篇与续读 | core 无重叠、context 仅辅助理解、每片记录、pending 队列、版本校验 |
 | 11 维蒸馏 | 文风、句法、词汇、叙事、人物、对白、节奏、场景、悬念、情绪、主题母题 |
@@ -46,6 +48,31 @@ Quick Profile / Deep Analysis / Novel DNA / Style Bible / Writing Constraints
 ## 安装与调用
 
 需要 Python **3.10+**，无需 `pip install`。`python` 不可用时使用系统对应的 `python3` 或 Windows `py -3`。
+
+### Grok CLI、Google Antigravity 和其他 Agent
+
+下载完整仓库后，在仓库根目录执行（项目路径需已存在；Windows 可将 `python3` 换成 `py -3`）：
+
+```sh
+python3 scripts/skill_host.py install --host grok --project "/path/to/project"
+python3 scripts/skill_host.py install --host antigravity --project "/path/to/project"
+python3 scripts/skill_host.py doctor --host grok --project "/path/to/project"
+```
+
+Grok Build 安装到 `.grok/skills/novel-distillation-skill/`；Antigravity 安装到 `.agents/skills/novel-distillation-skill/`。Antigravity CLI 可选择 `--host antigravity-cli`，Codex 可选择 `--host codex`；`--user` 可替代 `--project` 安装到各自用户目录。已有目录会拒绝覆盖。
+
+目录依据 [Grok 官方文档](https://docs.x.ai/build/features/skills-plugins-marketplaces) 和 [Antigravity 官方文档](https://www.antigravity.google/docs/skills?tab=ide) 核对；同名第三方 Grok CLI 按自己的发现机制使用。安装后在宿主里确认技能可见，或明确要求读取 Skill 实际路径下的 SKILL.md，使用 [通用启动提示词](prompts/portable-start.md)，无需 `$skill` 专有语法。
+
+```sh
+# 给其他机器分发完整、带文件哈希清单的 ZIP；不包含用户小说或分析工作区
+python3 scripts/skill_host.py pack --host grok --out outputs/grok-v030.zip
+python3 scripts/skill_host.py pack --host antigravity --out outputs/antigravity-v030.zip
+
+# 只验证目录、打包与安装后工具链；不调用 Grok/Antigravity 模型
+python3 examples/run_host_demo.py --out outputs/host-check
+```
+
+当前提供官方目录适配和本地工具链验证，不宣称已在这些宿主登录并完成模型端到端认证。没有终端或写入能力时，可对可见原文做明确未校验的辅助分析，或让用户本地运行命令交接记录；不要生成虚假的 SHA、坐标或已读覆盖。完整的目录表、操作系统用法、诊断边界和续读流程见 [宿主适配指南](references/hosts.md)。
 
 ### 安装到 Codex 当前项目
 
@@ -187,6 +214,8 @@ agents/openai.yaml        宿主显示/调用信息
 scripts/ndlib.py           本地处理、证据校验、组装与混合
 scripts/novel_distill.py   17 个 CLI 子命令与报告导出
 scripts/ndtools.py         引用定位、阅读记忆、轻量进度与写作配方
+scripts/skill_host.py      多宿主安装、只读诊断与离线分发
+prompts/                  无宿主专有语法的启动提示词
 assets/*.schema.json      抽取记录和 Novel DNA 格式
 references/               维度、抽取提示、工作流、契约与应用指南
 examples/                 原创测试短篇 + 可复现实例

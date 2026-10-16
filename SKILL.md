@@ -1,9 +1,9 @@
 ---
 name: novel-distillation-skill
 description: 蒸馏指定小说的文笔、文风、叙事结构、角色语言、节奏、悬念与主题，生成带原文证据和反例的 Novel DNA、Style Bible 与写作约束。用于“炼制小说 skill”“提炼写作机制”“多小说混合”“小说对比”“按目标机制诊断或改写章节”。Distill novels into evidence-backed, reusable writing mechanisms. Not for plot-only summaries, model-weight distillation, scraping books, or automatic fine-tuning.
-compatibility: 语义分析需要可读写文件的 LLM Agent；本地辅助脚本需要 Python 3.10+，仅标准库，无网络和 API 密钥需求。
+compatibility: 支持标准 SKILL.md 宿主及显式路径加载，包括 Grok Build CLI、Google Antigravity、Codex。完整工具链需文件读写与 Python 3.10+；仅标准库，无模型调用或密钥。无终端时降级为未校验辅助分析。
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Novel Distillation Skill
@@ -11,6 +11,10 @@ metadata:
 把原文转化为能解释、能验证、能执行的写作机制，而非读后感、换词仿写或整本故事摘要。
 
 ## 先确定任务和边界
+
+先确认本次会话实际具备文件读取、写入与终端能力。Grok Build、Antigravity 与通用宿主的安装/调用见 [hosts](references/hosts.md)；不依赖 `$skill` 或特定工具名称。在安装目录中运行 `scripts/novel_distill.py --help`，使用实际可用的 Python 3.10+：python3、python 或 Windows 的 py -3。不要为运行本 Skill 改宿主权限、登录、模型或自动执行策略。
+
+能执行工具链时按下面流程操作。无终端/写权限时只分析实际可见文本，以章节/段落和短引文定位，并标明“未校验”；不要虚构 SHA、全局坐标、已保存产物或已记录覆盖率。可由用户本地运行命令时，按 hosts 中的手动交接流程导入记录并校验。入口提示词见 [portable start](prompts/portable-start.md)。
 
 使用已知需求直接开始。默认中文、Deep 模式、只分析用户明确提供的文本。
 只有书名而没有可读原文时，说明缺少原文，不能凭记忆生成“全文蒸馏”。不得擅自下载小说。
@@ -49,6 +53,8 @@ python "SKILL_ROOT/scripts/novel_distill.py" record "WORK" --analysis "chunk-res
 只有导入了合格记录才计入已分析覆盖率；`prepare`、打开片段或统计完成不代表读过。没有值得记录的风格现象时允许 `observations: []`，但仍需真实的摘要与反例搜索说明。修改记录必须显式传 `--replace`。
 
 短引文用 `locate WORK --id C000001 --quote "准确原句"` 查找全局坐标；重复命中结合上下文选择，不能默认拿第一处。record-template 是待填模板，不是分析结果。片段 record 后，按 reading-memory schema 追加人物状态、时间线、伏笔 plant/advance/payoff。区分 observed/reported/inferred；推测修正新增记录，保留旧证据。prompt 会加入有界的前文记忆；留意 omitted，按人物或线索 subject 补查，不把未包含的记忆当成不存在。
+
+引文包含引号、换行或 shell 特殊字符时，将准确原句另存 UTF-8 小文件，用 `locate WORK --id C000001 --quote-file quote.txt` 避免 shell 转义；只按原文快照规则去 BOM、统一换行，不删除其他空白或额外末尾换行。模型结果只有一层 JSON 代码围栏时可用 `record WORK --analysis reply.md --from-chat`；正文、重复字段、非有限数字和错误引用仍会被拒绝，不自动补造缺失字段或纠正原文。
 
 长篇中可用 `status WORK --quick` 查看文件存在进度；它明确未验证，不能用来报告已读覆盖。会话结束与交付前仍运行完整 status 和 validate。
 

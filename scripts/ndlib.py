@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 ROOT = Path(__file__).resolve().parents[1]
 DIMENSIONS = ("style", "syntax", "vocabulary", "narrative", "character", "dialogue",
               "pacing", "scene", "suspense", "emotion", "theme_motif")
@@ -53,7 +53,12 @@ def read_text(path: Path, encoding: str = "utf-8-sig", *, normalize: bool = True
     return text
 
 
-def load_json(path: Path) -> Any:
+def load_json(path: Path, *, allow_fence: bool = False) -> Any:
+    text = read_text(path)
+    if allow_fence:
+        fenced = re.fullmatch(r"```(?:json)?[ \t]*\n(.*?)\n```[ \t]*", text.strip(), re.S | re.I)
+        if fenced:
+            text = fenced.group(1)
     def reject(value: str) -> None:
         raise Error(f"Non-finite JSON value: {value}")
     def unique_keys(items: list[tuple]) -> dict:
@@ -64,7 +69,7 @@ def load_json(path: Path) -> Any:
             result[key] = value
         return result
     try:
-        return json.loads(read_text(path), parse_constant=reject, object_pairs_hook=unique_keys)
+        return json.loads(text, parse_constant=reject, object_pairs_hook=unique_keys)
     except json.JSONDecodeError as exc:
         raise Error(f"Invalid JSON in {path}: {exc}") from exc
 
