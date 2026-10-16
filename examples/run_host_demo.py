@@ -15,6 +15,7 @@ from skill_host import HOSTS, install, package
 
 
 def run(out: Path) -> dict:
+    out = out.expanduser().resolve()
     if out.exists():
         raise Error(f"Host smoke output already exists: {out}")
     out.mkdir(parents=True)

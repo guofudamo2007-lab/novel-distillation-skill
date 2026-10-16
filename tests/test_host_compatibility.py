@@ -22,7 +22,7 @@ class HostCompatibilityTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.project = self.root / "中文 novel project"
         self.project.mkdir()
 
@@ -232,6 +232,15 @@ class HostCompatibilityTests(unittest.TestCase):
         result = self.cli(root / "scripts/novel_distill.py", "--version", cwd=self.root)
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual(nd.VERSION, result.stdout.strip())
+
+    def test_host_smoke_command_resolves_relative_output_before_switching_cwd(self):
+        result = self.cli(ROOT / "examples/run_host_demo.py", "--out", "outputs/relative 中文", cwd=self.project)
+        self.assertEqual(0, result.returncode, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(set(host.HOSTS), {item["host"] for item in report["layouts"]})
+        output = self.project / "outputs/relative 中文"
+        self.assertTrue((output / "host-check.json").is_file())
+        self.assertTrue((output / "grok 中文 project/demo/novel-dna.json").is_file())
 
 
 if __name__ == "__main__":
