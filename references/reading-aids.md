@@ -11,6 +11,8 @@ python "SKILL_ROOT/scripts/novel_distill.py" record-template "WORK" --id C000001
 
 `locate` 保留原句的标点、空白和 Unicode 码点，不做模糊匹配；引用长度 1..240。省略 `--id` 可查全篇，默认返回最多 20 个位置，`--limit` 上限 100，仍报告全部命中数。重复句报告 ambiguous，不替 Agent 选位置。匹配起点属于 core；末尾可延伸至其 context_end。`can_record=false` 表示跨出合法证据范围，不能直接导入。没有匹配就回原文重读，不改引文来凑证据。
 
+v0.3.0 可用 `--quote-file quote.txt` 替代 --quote，读取 UTF-8 引文，避免不同 shell 对引号、换行、$ 或反引号的解释。按原文快照规则去掉 UTF-8 BOM，将 CRLF/CR 统一为 LF；不去除其他空白或额外末尾换行。额外内容需要回原文核对后修正。模型只输出了一层 JSON 代码围栏时，可用 record 的 --from-chat 显式导入；详见 [宿主适配](hosts.md)。
+
 模板绑定 source_sha256/chunk_id，但 summary/counterexample_search 留空，因此不能通过 record，也不改变覆盖率。Agent 阅读后填好模板，选择确定的定位坐标，再运行 record。
 
 ## 跨章阅读记忆

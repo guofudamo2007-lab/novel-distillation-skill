@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-10-16
+
+Added documented Grok Build CLI and Google Antigravity IDE/app/CLI directory profiles alongside Codex and a generic explicit-path entry. New offline skill_host.py installs complete public resources without overwriting existing installs, reports read-only diagnostics, and builds reproducible ZIPs with per-file hashes. Distribution resources are explicitly allowlisted; manuscripts, workspaces, private files and host configuration are not copied.
+
+Added a portable starting prompt and capability-based full/assisted/unverified workflows, with shared-workspace resume instructions. Existing source, quote and coverage validation stays unchanged. record --from-chat accepts exactly one outer JSON Markdown fence when explicitly requested; it still rejects prose, duplicate fields, non-finite numbers and invalid evidence. locate --quote-file reads exact UTF-8 quotes without shell interpolation or whitespace repair.
+
+Added cross-host layout and copied-runtime smoke checks, Unicode/space-path tests, reproducible-package/privacy regressions and strict handoff-import tests. CI now also covers macOS. Checks validate local package layouts and toolchains, not host login, native discovery or literary model quality. Runtime remains standard-library-only, with no model calls, SDKs or host permission/configuration changes.
+
 ## 0.2.0 — 2026-10-09
 
 Added exact quote location with ambiguity reporting and record templates; source-backed, append-only character/timeline/foreshadow memory with bounded pre-core prompt context; and explicitly unverified file-presence progress via status --quick.
