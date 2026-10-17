@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from ndlib import Error, assemble, prepare, record_analysis, validate, workspace, write_json
 from novel_distill import export
-from ndtools import check_recipe, locate_quote, make_recipe, record_memory, reading_memory
+from ndtools import (check_diagnostic, check_recipe, distill_brief, locate_quote,
+                     make_diagnostic_template, make_recipe, reading_memory, record_memory)
 
 QUOTES = [
     ("她没有回头。他把另一只空杯推回柜子深处。", "“还有热水吗？”\n“壶在你身后。”"),
@@ -79,6 +80,7 @@ def make_demo(out: Path) -> dict:
         "certainty": "observed", "summary": "把空杯推回柜子；未明说关系原因。", "related_ids": [],
         "evidence": [{k: match[k] for k in ("chunk_id", "start", "end", "quote")}]})
     write_json(out / "memory-before-chapter2.json", reading_memory(work, "C000002"))
+    write_json(out / "distill-brief.json", distill_brief(work))
     recipe = make_recipe(dna, "写一场两人久别重逢、都不愿直说的原创场景", ["R-emotion", "R-dialogue"], "balanced", [work])
     recipe["facts_to_preserve"] = ["两人曾共修自行车；重逢在修车铺；此时不解释离开的原因。"]
     recipe["original_example"] = "她停在卷帘门外。他从钉板上取下第二把扳手，放到空凳旁。\n‘还修车吗？’\n‘后轮没装。’"
@@ -86,6 +88,19 @@ def make_demo(out: Path) -> dict:
     recipe["status"] = "reviewed"
     check_recipe(recipe, dna, [work])
     write_json(out / "writing-recipe.json", recipe)
+    diag = make_diagnostic_template(dna, text, "balanced", [work])
+    diag["status"] = "reviewed"
+    diag["summary"] = "人工核对样例文本：器物位置与借物回应均符合规则。"
+    diag["review_notes"] = "仓库作者人工示范：校验目标文本哈希、引文坐标与 DNA 规则绑定。"
+    diag["preserved_strengths"] = ["保持空杯位置跨章推进与简短借物回应。"]
+    diag["issues"] = [{"id": "D0001", "category": "aesthetic_choice", "rule_id": "R-emotion",
+                       "start": match["start"], "end": match["end"], "quote": match["quote"],
+                       "symptom": "仅通过推回空杯呈现疏离，未交代人物过往背景。",
+                       "why_problematic": "若用于长篇开篇，读者可能缺少关系前置锚点。",
+                       "alternative_interpretation": "极短篇刻意留白，让读者从三章器物位移自行推断。",
+                       "minimal_fix": "保持原句，不追加直白心理旁白。"}]
+    check_diagnostic(diag, dna, text, [work])
+    write_json(out / "diagnostic-report.json", diag)
     return checked
 
 

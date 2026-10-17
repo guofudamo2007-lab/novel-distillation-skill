@@ -13,8 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "examples"))
 import ndlib as nd
-from ndtools import (check_recipe, locate_quote, make_recipe, quick_status,
-                     reading_memory, record_memory, record_template)
+from ndtools import (check_diagnostic, check_recipe, distill_brief, locate_quote,
+                     locate_target_quote, make_diagnostic_template, make_recipe,
+                     quick_status, reading_memory, record_memory, record_template)
 from run_demo import make_demo
 from run_evaluation import prepare_evaluation
 
@@ -266,8 +267,11 @@ class ReadingAidsTests(unittest.TestCase):
         commands = [("locate", self.work, "--quote", "空杯"), ("status", self.work, "--quick"),
                     ("memory", self.work, "--before", "C000002"),
                     ("record-template", self.work, "--id", "C000002", "--out", self.root / "template.json"),
+                    ("distill-brief", self.work, "--out", self.root / "brief.json"),
                     ("recipe", self.root / "demo/novel-dna.json", "--task", "关系场景", "--rule", "R-emotion", "--out", self.root / "recipe.json"),
-                    ("recipe-check", self.root / "demo/writing-recipe.json", "--dna", self.root / "demo/novel-dna.json", "--workspace", self.work)]
+                    ("recipe-check", self.root / "demo/writing-recipe.json", "--dna", self.root / "demo/novel-dna.json", "--workspace", self.work),
+                    ("diagnose-check", self.root / "demo/diagnostic-report.json", "--dna", self.root / "demo/novel-dna.json",
+                     "--target", ROOT / "examples/sample-novel.txt", "--workspace", self.work)]
         for command in commands:
             result = self.cli(*command)
             self.assertEqual(0, result.returncode, result.stderr)
@@ -276,10 +280,102 @@ class ReadingAidsTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("UNTRUSTED_READING_MEMORY", result.stdout)
         self.assertIn("M000001", result.stdout)
+        self.assertIn("known_subjects", result.stdout)
         entry = self.root / "entry.json"
         nd.write_json(entry, self.memory_entry())
         result = self.cli("memory-record", self.work, "--entry", entry)
         self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_distill_brief_aggregates_notes_and_foreshadow_chains(self):
+        plant = self.memory_entry("M000002", 0, "foreshadow", "plant")
+        plant["subject"] = "漏雨窗台"
+        record_memory(self.work, plant)
+        advance = self.memory_entry("M000003", 1, "foreshadow", "advance")
+        advance["subject"] = "漏雨窗台"
+        advance["related_ids"] = ["M000002"]
+        record_memory(self.work, advance)
+        brief = distill_brief(self.work)
+        self.assertEqual(3, len(brief["chunk_ledger"]))
+        self.assertEqual(3, len(brief["character_notes"]))
+        self.assertEqual(3, len(brief["scene_notes"]))
+        self.assertEqual("strong", brief["dimension_workbench"]["emotion"]["engineering_ceiling_if_same_mechanism"])
+        self.assertEqual("unknown", brief["dimension_workbench"]["style"]["engineering_ceiling_if_same_mechanism"])
+        self.assertEqual(["周闻"], brief["memory_summary"]["known_subjects"]["character"])
+        self.assertEqual(["漏雨窗台"], brief["memory_summary"]["known_subjects"]["foreshadow"])
+        self.assertEqual(1, len(brief["memory_summary"]["unresolved_foreshadows"]))
+        self.assertEqual("advance", brief["memory_summary"]["unresolved_foreshadows"][0]["latest_stage"])
+        self.assertEqual(1, len(reading_memory(self.work, "C000003")["unresolved_foreshadows"]))
+        payoff = self.memory_entry("M000004", 2, "foreshadow", "payoff")
+        payoff["subject"] = "漏雨窗台"
+        payoff["related_ids"] = ["M000003"]
+        record_memory(self.work, payoff)
+        after = distill_brief(self.work)
+        self.assertEqual([], after["memory_summary"]["unresolved_foreshadows"])
+        self.assertEqual(1, len(after["memory_summary"]["resolved_foreshadows"]))
+        self.assertEqual(["M000002", "M000003", "M000004"],
+                         after["memory_summary"]["resolved_foreshadows"][0]["entry_ids"])
+
+    def test_locate_target_quote_and_cli_exclusivity(self):
+        target = self.root / "chapter.txt"
+        target.write_text("第一段\n他说：“茶还热。”\n他又说：“茶还热。”\n", encoding="utf-8")
+        located = locate_target_quote(target, "“茶还热。”")
+        self.assertEqual(2, located["total_matches"])
+        self.assertTrue(located["ambiguous"])
+        self.assertEqual(2, located["matches"][0]["line_start"])
+        cli_ok = self.cli("locate", "--target", target, "--quote", "“茶还热。”")
+        self.assertEqual(0, cli_ok.returncode, cli_ok.stderr)
+        self.assertEqual(2, json.loads(cli_ok.stdout)["total_matches"])
+        for bad_args in (("locate", "--quote", "空杯"),
+                         ("locate", self.work, "--target", target, "--quote", "空杯"),
+                         ("locate", "--target", target, "--id", "C000001", "--quote", "空杯")):
+            with self.subTest(args=bad_args):
+                bad = self.cli(*bad_args)
+                self.assertEqual(2, bad.returncode)
+
+    def test_diagnostic_report_validation_and_bounds(self):
+        target = self.root / "my-chapter.txt"
+        target_text = "她问他为什么不说话。他心里想自己其实很在乎她，只是嘴上说：“壶在你身后。”\n"
+        target.write_text(target_text, encoding="utf-8")
+        brief_out = self.root / "diag-brief.json"
+        report_out = self.root / "diag-report.json"
+        res = self.cli("diagnose", self.root / "demo/novel-dna.json", "--target", target,
+                       "--workspace", self.work, "--out", brief_out, "--report-out", report_out)
+        self.assertEqual(0, res.returncode, res.stderr)
+        report = nd.load_json(report_out)
+        self.assertEqual("draft", report["status"])
+        check_diagnostic(report, self.dna, target_text, [self.work])
+        match = locate_target_quote(target, "他心里想自己其实很在乎她")["matches"][0]
+        report["issues"] = [{
+            "id": "D0001",
+            "category": "style_divergence",
+            "rule_id": "R-emotion",
+            "start": match["start"],
+            "end": match["end"],
+            "quote": match["quote"],
+            "symptom": "直接用心理旁白点破在乎。",
+            "why_problematic": "违背低冲突关系场景以器物状态承载情绪的机制。",
+            "alternative_interpretation": "若为全知幽默反讽可成立，但此处语境为克制重逢。",
+            "minimal_fix": "删去直白心理说明，改为移动器物的具体动作。",
+        }]
+        report["status"] = "reviewed"
+        with self.assertRaisesRegex(nd.Error, "non-empty summary"):
+            check_diagnostic(report, self.dna, target_text, [self.work])
+        report["summary"] = "发现一处直接解释心理的风格偏离。"
+        report["review_notes"] = "已核对目标章节全文与规则适用边界。"
+        checked = check_diagnostic(report, self.dna, target_text, [self.work])
+        self.assertTrue(checked["valid"])
+        self.assertEqual(1, checked["issues"])
+        bad_quote = copy.deepcopy(report)
+        bad_quote["issues"][0]["quote"] = "伪造的目标引文"
+        with self.assertRaisesRegex(nd.Error, "exactly match"):
+            check_diagnostic(bad_quote, self.dna, target_text, [self.work])
+        bad_rule = copy.deepcopy(report)
+        bad_rule["issues"][0]["rule_id"] = "R-missing"
+        with self.assertRaisesRegex(nd.Error, "missing or below"):
+            check_diagnostic(bad_rule, self.dna, target_text, [self.work])
+        bad_target = copy.deepcopy(report)
+        with self.assertRaisesRegex(nd.Error, "different target"):
+            check_diagnostic(bad_target, self.dna, target_text + "额外修改", [self.work])
 
 
 if __name__ == "__main__":

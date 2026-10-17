@@ -32,6 +32,7 @@ RESOURCES = (
     "scripts/ndlib.py", "scripts/ndtools.py", "scripts/novel_distill.py", "scripts/skill_host.py",
     "assets/chunk-analysis.schema.json", "assets/novel-dna.schema.json",
     "assets/reading-memory.schema.json", "assets/writing-recipe.schema.json",
+    "assets/diagnostic-report.schema.json",
     "references/apply.md", "references/dimensions.md", "references/evaluation.md",
     "references/extraction-prompt.md", "references/output-contract.md", "references/reading-aids.md",
     "references/workflow.md", "references/hosts.md", "prompts/portable-start.md",

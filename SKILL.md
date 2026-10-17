@@ -3,7 +3,7 @@ name: novel-distillation-skill
 description: 蒸馏指定小说的文笔、文风、叙事结构、角色语言、节奏、悬念与主题，生成带原文证据和反例的 Novel DNA、Style Bible 与写作约束。用于“炼制小说 skill”“提炼写作机制”“多小说混合”“小说对比”“按目标机制诊断或改写章节”。Distill novels into evidence-backed, reusable writing mechanisms. Not for plot-only summaries, model-weight distillation, scraping books, or automatic fine-tuning.
 compatibility: 支持标准 SKILL.md 宿主及显式路径加载，包括 Grok Build CLI、Google Antigravity、Codex。完整工具链需文件读写与 Python 3.10+；仅标准库，无模型调用或密钥。无终端时降级为未校验辅助分析。
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Novel Distillation Skill
@@ -27,9 +27,9 @@ metadata:
 
 - 首次抽取/完整蒸馏：读 [workflow](references/workflow.md)、[dimensions](references/dimensions.md) 和 [output contract](references/output-contract.md)。
 - 分片抽取：读 [extraction prompt](references/extraction-prompt.md)，不必反复载入所有参考。
-- 首次使用引用定位、跨章记忆或轻量进度：读 [reading aids](references/reading-aids.md)。
-- 对比、混合、诊断、改写：读 [apply](references/apply.md)，再按需读相关维度。
-- 数据格式以 `assets/*.schema.json` 为准；新增阅读记忆和写作配方契约。新 DNA 为 1.1，分片分析仍为 1.0。
+- 引用定位、跨章记忆、未回收伏笔索引或蒸馏工作台：读 [reading aids](references/reading-aids.md)。
+- 对比、混合、临床诊断、改写与写作配方：读 [apply](references/apply.md)，再按需读相关维度。
+- 数据格式以 `assets/*.schema.json` 为准（含分片分析 1.0、Novel DNA 1.1、阅读记忆 1.0、写作配方 1.0、章节诊断报告 1.0）。
 
 把下面命令中的 `SKILL_ROOT` 替换为实际安装目录，`WORK` 替换为当前项目中新建的私有工作目录。不要假设当前工作目录就是 Skill 根目录。
 
@@ -52,7 +52,7 @@ python "SKILL_ROOT/scripts/novel_distill.py" record "WORK" --analysis "chunk-res
 
 只有导入了合格记录才计入已分析覆盖率；`prepare`、打开片段或统计完成不代表读过。没有值得记录的风格现象时允许 `observations: []`，但仍需真实的摘要与反例搜索说明。修改记录必须显式传 `--replace`。
 
-短引文用 `locate WORK --id C000001 --quote "准确原句"` 查找全局坐标；重复命中结合上下文选择，不能默认拿第一处。record-template 是待填模板，不是分析结果。片段 record 后，按 reading-memory schema 追加人物状态、时间线、伏笔 plant/advance/payoff。区分 observed/reported/inferred；推测修正新增记录，保留旧证据。prompt 会加入有界的前文记忆；留意 omitted，按人物或线索 subject 补查，不把未包含的记忆当成不存在。
+短引文用 `locate WORK --id C000001 --quote "准确原句"` 查找全局坐标；重复命中结合上下文选择，不能默认拿第一处。record-template 是待填模板，不是分析结果。片段 record 后，按 reading-memory schema 追加人物状态、时间线、伏笔 plant/advance/payoff。区分 observed/reported/inferred；推测修正新增记录，保留旧证据。`prompt` 与 `memory` 自动提供有界前文记忆、`known_subjects`（已建档角色/线索索引）与 `unresolved_foreshadows`（待回收伏笔清单）；留意 omitted，按人物或线索 subject 补查。
 
 引文包含引号、换行或 shell 特殊字符时，将准确原句另存 UTF-8 小文件，用 `locate WORK --id C000001 --quote-file quote.txt` 避免 shell 转义；只按原文快照规则去 BOM、统一换行，不删除其他空白或额外末尾换行。模型结果只有一层 JSON 代码围栏时可用 `record WORK --analysis reply.md --from-chat`；正文、重复字段、非有限数字和错误引用仍会被拒绝，不自动补造缺失字段或纠正原文。
 
@@ -63,15 +63,16 @@ Quick：先保存册/卷、位置层、chunk ID 与选择理由的抽样计划�
 ## 2. Distill：从观察变成规则
 
 ```sh
+python "SKILL_ROOT/scripts/novel_distill.py" distill-brief "WORK" --out "distill-brief.json"
 python "SKILL_ROOT/scripts/novel_distill.py" assemble "WORK" --out "draft-dna.json"
 ```
 
-该命令只组装 **candidate / low** 的观察，不替你进行语义归纳。接下来由你：
+`assemble` 只组装 **candidate / low** 的观察，`distill-brief` 进一步汇总各片段摘要、按 11 维分组的候选、跨片段 `character_notes`/`scene_notes` 以及未回收/已回收伏笔索引，不替你进行语义归纳。接下来由你：
 
-1. 按 11 个维度合并同机制观察，保留全部支持和反例引用；移除不再使用的候选规则，同步各维度 rule_ids。
-2. 区分全书倾向、角色特征、场景策略和一次性修辞。写清“何时使用 → 具体动作 → 效果 → 例外”，不要停留在“细腻、冷峻、有张力”。
+1. 对照 `distill-brief` 按 11 个维度合并同机制观察，保留全部支持和反例引用；移除不再使用的候选规则，同步各维度 rule_ids。
+2. 区分全书倾向、角色特征、场景策略和一次性修辞。写清“触发条件（Scope）→ 具体叙事动作（Instruction，去专名）→ 认知效果（Mechanism）→ 边界例外（Exceptions）”，不要停留在“细腻、冷峻、有张力”。
 3. 检查跨章稳定性、冲突与缺失；频次必须有分母和采样口径。不得用修辞印象编造百分比、情绪值、词性比例或角色对白比例。
-4. 补上维度 summary、角色语言指纹、章节/场景模板、风格禁区、limitations；未分析维度保持 unknown，不凑满。
+4. 依据汇总的 `character_notes`、`scene_notes` 与伏笔链，补上维度 summary、角色四维语用指纹、去剧情化的章节/场景模板、风格禁区、limitations；未分析维度保持 unknown，不凑满。
 5. 区分叙述事实、人物证词、内心活动和说服性台词；人物的反驳也是证据，不能把一句格言当作者立场。角色口吻应按对象和任务比较。每条规则填写 review：checked_sources 的已读片段、counterexample_search、attribution、alternative_explanations、decision。新 DNA 的 recurring/strong 与 reviewed 状态要求逐条 review=reviewed；缺少充分证据时保留 candidate。旧 DNA 1.0 仍能读取，校验明确标记 legacy-unstructured，不冒充完成新审查。
 6. 将结果保存为新的 `novel-dna.json`，不要覆盖原文或不可追溯地改写历史记录。
 
@@ -90,11 +91,11 @@ python "SKILL_ROOT/scripts/novel_distill.py" export "novel-dna.json" --workspace
 
 针对具体写作任务，Agent 按对象、视角、目标选择 1..5 条相关规则，用 `recipe DNA --task "目标场景" --rule Rxxxx --workspace WORK --out recipe-draft.json` 准备草稿；补充事实锁、具体步骤、原创示例和检查清单，另存 reviewed 配方，再运行 `recipe-check 配方 --dna DNA --workspace WORK`。工具不自动创作示例、不自动确认规则适用；读 [apply](references/apply.md) 中的写作配方流程。
 
-对比/混合用 CLI 生成可溯源材料，再由你处理语义差异和冲突。诊断先建立目标文本坐标，再给每项问题附：原文位置、具体症状、目标规则、反例/不适用原因、最小改法。特别检查“角色替作者念旁白”，不要把所有内心戏或长对白都判为错误。
+对比/混合用 CLI 生成可溯源材料，再由你处理语义差异和跨源冲突。章节反向诊断先运行 `diagnose DNA --target chapter.txt --workspace WORK --out brief.json --report-out report-draft.json`，再用 `locate --target chapter.txt --quote "问题原句"` 查找目标文本精确坐标，区分 `logic_defect`（逻辑/视角越界）、`mouthpiece_warning`（角色替作者念旁白/升华主题）、`style_divergence`（风格偏离/AI腔/语境错配）与 `aesthetic_choice`（合理审美取舍），填写诊断报告并运行 `diagnose-check report.json --dna DNA --target chapter.txt --workspace WORK` 核验。
 
-改写先锁定目标作品的事实、人设、视角、时序和因果；只调整用户指定的段落。改后对照事实、角色区分、信息释放和原文重合检查，交代改动与未解决问题。
+改写先锁定目标作品的事实、人设、视角、时序和因果；只调整用户指定的段落，清理冗余心理形容词解释与 AI 套话。改后对照事实、角色区分、信息释放和原文重合检查，交代改动与未解决问题。
 
 ## 完成标准
 
-交付时报告实际输入版本、已读/总片段、已分析与未知维度、规则数量、关键证据与反例、校验命令结果、产物位置及仍需人工复核的事项。
+交付时报告实际输入版本、已读/总片段、已分析与未知维度、规则数量、关键证据与反例、未回收伏笔状态、校验命令结果、产物位置及仍需人工复核的事项。
 不要把空 schema、统计报告或自动组装候选称为“完整蒸馏完成”。不要宣称未经测试的宿主兼容性或无人值守全自动语义分析。

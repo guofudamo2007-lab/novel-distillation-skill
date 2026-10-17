@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 ROOT = Path(__file__).resolve().parents[1]
 DIMENSIONS = ("style", "syntax", "vocabulary", "narrative", "character", "dialogue",
               "pacing", "scene", "suspense", "emotion", "theme_motif")

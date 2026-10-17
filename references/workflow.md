@@ -1,4 +1,4 @@
-# 工作流与长篇处理
+# 工作流与长篇处理 · v0.4.0
 
 ## 输入与版本
 
@@ -6,46 +6,37 @@
 
 脚本支持 TXT/Markdown；默认 UTF-8 / UTF-8 BOM，其他编码显式 `--encoding gb18030` 等。只移除 BOM、统一换行，不去空行、不重新分段、不删除页码，以保持位置可追溯。PDF、EPUB、DOCX 先由适当工具转换并核对，不把目录、页眉、脚注污染后的结果当净文本。本版没有这些格式的内置解析器或 OCR。
 
-`prepare` 创建不可覆盖的工作目录，含 source.txt、manifest.json、analyses/ 和阻止目录内容被 Git 跟踪的 .gitignore。归一化全文 SHA-256 是版本锚点，不是对文件作者或真实性的认证。原文变动后创建新工作目录，旧证据不得自动移植。
+`prepare` 创建不可覆盖的工作目录，含 `source.txt`、`manifest.json`、`analyses/` 和阻止目录内容被 Git 跟踪的 `.gitignore`。归一化全文 SHA-256 是版本锚点，不是对文件作者或真实性的认证。原文变动后创建新工作目录，旧证据不得自动移植。
 
-## 阅读计划
+## 阅读计划与标题边界
 
-新工作区的标题识别支持中文“第…章/节/幕/卷/部/回/集”、含空格的序章/序幕/尾声/后记/楔子、英文 Chapter/Part/Book 和 Markdown 标题。中文序号及单元之后须是行尾，或用空白、·、冒号、破折号/连字符分隔标题；如“第二幕·归航”。此边界避免把“第七章节里写过……”直接误分为章。无分隔的“第一章归航”或未标记的书名不能可靠区分正文，需人工确认，必要时在另存副本中补 Markdown 标题。
+新工作区的标题识别支持中文“第…章/节/幕/卷/部/回/集”、含空格的序章/序幕/尾声/后记/楔子、英文 Chapter/Part/Book 和 Markdown 标题。中文序号及单元之后须是行尾，或用空白、`·`、冒号、破折号/连字符分隔标题；如“第二幕·归航”。此边界避免把正文中的“第十六章节里写过……”直接误分为章。无分隔的“第一章归航”或未标记的书名不能可靠区分正文，需人工确认，必要时在另存副本中补 Markdown 标题。
 
-它不是目录清洗器；目录和小节仍可能构成 segment。先检查 manifest.chapters，特别检查长度异常的第一段、卷册交界、序/尾声和疑似对白。不得删除广告后沿用旧坐标；广告、出版梗概、重复卷名和章首复现引句应记录为输入问题，不能充当文学证据或额外独立支持。若另存适配副本，保留变换与原文位置映射，不改用户原稿。
+它不是目录清洗器；目录和小节仍可能构成 segment。先检查 `manifest.chapters`，特别检查长度异常的第一段、卷册交界、序/尾声和疑似对白。不得删除广告后沿用旧坐标；广告、出版梗概、重复卷名和章首复现引句应记录为输入问题，不能充当文学证据或额外独立支持。
 
-自 v0.1.1 起，新 manifest 含 segmentation_version="2"；缺少字段的旧工作区按 v1 原规则校验。因此升级不会重切旧快照或改变已保存证据。要使用新分章，请重新 prepare 到新目录；不要手工补版本号、修改 manifest 坐标或自动移植旧 read_chunks。没有标题的文本仍可分块，但不声称已掌握跨章稳定性。
+自 v0.1.1 起，新 manifest 含 `segmentation_version="2"`；缺少字段的旧工作区按 v1 原规则校验。要使用新分章，请重新 `prepare` 到新目录；不要手工补版本号或修改旧 manifest。
 
-Quick 模式：先保存抽样计划，列明册/卷、开中末位置层、chunk ID、选择理由和是否预览过。跨卷抽样要检查每册均被覆盖；再补对白、动作、低冲突、转折等实际存在的场景。目的性选段不能冒充随机抽样。报告已记录片数/总片数；如报告字符比例，分子只算这些core，分母与归一化副本一致，并说明标题、空白、广告是否计入技术覆盖。上下文不重复计数，不从摘要推测未读原文。
+- **Quick 模式**：先保存抽样计划，列明册/卷、开中末位置层、chunk ID、选择理由和是否预览过。跨卷抽样要检查每册均被覆盖；再补对白、动作、低冲突、转折等实际存在的场景。目的性选段不能冒充随机抽样。明确哪些是完整章节，哪些只是窗口。
+- **Deep 模式**：顺序读完，遇到前文伏笔先用 `memory-record` 记 `plant`/`advance`，直到读到回收证据再记 `payoff`。每完成一个 core 保存 JSON 并 `record`。`status`（或长篇中途的 `status --quick`）列出未完成 chunk ID，可跨会话续读。
+- **跨章记忆与伏笔追踪**：`prompt` 与 `memory` 自动提供 `known_subjects`（已建档角色/事件/线索）与 `unresolved_foreshadows`（待回收伏笔清单）。留意 `omitted` 计数，必要时用 `--memory-subject` 补查特定角色或线索。
 
-明确哪些是完整章节，哪些只是窗口。窗口不足以判断整场节奏、角色完整弧线或伏笔回收；需要检验这些结论时，连续补读铺垫—冲突—收束。只读过同一作者不能证明特征独有；生成写作约束也不等于完成迁移效果或读者质量评测。
+片段 `core` 无重叠，完整拼接严格等于归一化全文。左右 `context` 可能重叠，只用于理解。证据开头只能来自 `core`，避免重复计数。坐标是 Unicode 码点，左闭右开 `[start, end)`。
 
-Deep 模式：顺序读完，遇到前文伏笔先记“待确认”，直到读到回收证据。每完成一个 core 保存 JSON 并 record。status 列出未完成 chunk ID，可跨会话继续，不需要重做已验收片段。一次分析不要把整个数百万字文件塞进上下文。
+## 两轮推理：借 `distill-brief` 从分片观察升维到跨章规则
 
-v0.2.0 支持带原文证据的阅读记忆：人物状态、时间线和伏笔的 plant/advance/payoff。片段 record 后逐条追加，人物证词或分析推测明确标记。prompt 自动加载当前 core 前的有界记忆；按 subject 补查相关记录，关注 omitted。新证据推翻推测时追加修正，保留历史。记忆保存不增加覆盖率。字段与命令见 [reading aids](reading-aids.md)。
+第一轮（Extract）保留局部 `observation`、短 `evidence`、`character_notes` 与 `scene_notes`；第二轮（Distill）聚合机制而非简单拼接摘要：
 
-处理中可用 status --quick 安排续读；它只统计文件存在，不验证全文与记录内容。报告覆盖率前仍运行完整 status。定位证据用 locate，重复命中需要 Agent 消歧，末尾超出合法 context 的位置不能导入。
+1. 运行 `distill-brief WORK --out distill-brief.json` 生成跨章蒸馏工作台底稿，同时获取 `assemble` 组装的候选 DNA。
+2. 对照 `distill-brief` 中的 `dimension_workbench`：将跨片段属于同一种底层机制的候选规则合并为一条规则，汇总其 `evidence_ids` 与 `counterevidence_ids`，移除被合并的冗余候选规则，同步更新 `dimensions.rule_ids`、`characters.rule_ids` 和 `templates.rule_ids`。
+3. 对照 `character_notes` 与 `memory_summary` 中的人物状态链，按四维语用坐标编写 `characters` 语言指纹；对照 `scene_notes` 编写去剧情化的 `templates` 场景步骤；对照 `unresolved_foreshadows` 与 `resolved_foreshadows` 核查 `suspense` 维度的伏笔闭环情况。
+4. **风格必须与内容脱钩**：例如“反复出现红伞/蓝铅笔”是来源母题观察，“以同一日常器物的状态或位置变化承载人物关系进展”才是可迁移机制。原作专名可以留在研究说明，但严禁流入通用 `instruction`。
 
-片段 core 无重叠，完整拼接严格等于归一化全文。左右 context 可能重叠，只用于理解。证据开头只能来自 core，避免重复计数。坐标是 Unicode 码点而非 UTF-8 字节、UTF-16 单元、token 或显示列；end 不包含在引用内。
+## 逐条审查与临床应用
 
-## 两轮推理，不把分片笔记当结论
-
-第一轮保留局部 observation 与短 evidence；第二轮聚合机制而非简单拼接摘要。跨片段同一种机制合并为一条规则，重新分配 evidence_ids 和反例，避免重复规则虚增“频率”。合并后同步 dimensions.rule_ids、characters.rule_ids 和 templates.rule_ids。
-
-风格必须与内容脱钩。例如“反复出现红伞”是来源母题观察，“以物件状态承担人物情绪变化”才是可迁移机制。角色专名可以留在研究档案，但不应流入通用 instruction。常见套话和翻译习惯也不一定是作者独特风格。
-
-强特征需要跨真实章节复核；脚本的跨标题阈值只是最低防线。用实际出现的章数/已读章数表达观察频率；重合上下文、重复引用、混合配置中的重复来源不得重复充当独立证据。没有足够数据就保留 candidate，不补假数字。
-
-## 审核
-
-将每个重要结论反向查回原文，检查反例、适用条件、角色归属、叙述层级。负规则的措辞优先用“在所读样本中较少……，例外是……”而非“作者从不”。叙述结构不能只靠开头章节推断；伏笔必须同时关联埋设和回收，未知回收保持开放。
-
-新 DNA schema 1.1 每条规则包含 review。写明实际检查的来源与已读片段、反例搜索、叙述/角色归属、替代解释与最终决定。检查范围必须覆盖该规则的支持和反证据；不能引用未读片段来制造审查声明。recurring/strong 要求 review.status=reviewed；整体 reviewed 时所有规则都须逐条审查，候选仍可保留为候选。文本非空只是声明完整性的门槛，不能证明反例审查充分。旧 1.0 数据返回 legacy-unstructured；迁移到 1.1 必须真实补审，不自动填造记录。
-
-维度已完成语义整理才设 distilled；完全没分析则 unknown。reviewed 是分析者的明确审查声明，不是程序自动加的认证；必须填写 review_notes。保留未读范围与未知维度，即使部分规则已审查。
+- 将每个重要结论反向查回原文。DNA 1.1 每条规则包含 `review`：写明实际检查的 `checked_sources`（必须覆盖该规则全部正反证据所在已读片段）、`counterexample_search`、`attribution`（叙述者 vs 视角染色 vs 角色特定对象台词）、`alternative_explanations` 与 `decision`。
+- 晋升 `recurring`/`strong` 及整份 DNA 设为 `reviewed` 均要求逐条 `review.status="reviewed"`。没有足够跨章证据就保留 `candidate`。
+- 章节反向诊断时，先用 `diagnose` 生成准备材料与报告模板，再用 `locate --target` 精确获取目标章节问题原句的偏移坐标，区分 `logic_defect`、`mouthpiece_warning`、`style_divergence` 与 `aesthetic_choice`，填写结构化报告并通过 `diagnose-check` 校验。
 
 ## 交付与隐私
 
-先 validate --workspace，再 export。每份 Markdown 都保留 review_notes、limitations 和依据 read_chunks 计算的覆盖边界；reviewed 不等于全文读完或独立验收。Deep Analysis 是交付文件类型名，不代表本次使用了 Deep 模式。Deep Analysis 默认只含证据定位，不额外复制引文；Novel DNA JSON 保留短证据用于核查，分享前仍应审查。Writing Constraints 只采纳指定强度的规则，但脚本不会自动识别人名、专有情节或恶意指令，分析者必须人工把关。
-
-本地辅助命令无联网、无密钥、无遥测；宿主模型的读取与数据政策仍由宿主决定。不要把用户原文、未公开稿件、工作目录、分析日志提交到公共仓库。示例只使用仓库自写短篇。
+先 `validate --workspace`，再 `export`。每份 Markdown 都保留 `review_notes`、`limitations` 和依据 `read_chunks` 计算的覆盖边界。不要把用户原文、未公开稿件、工作目录或私有分析日志提交到公共仓库。

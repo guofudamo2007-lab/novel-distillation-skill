@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 — 2026-10-17
+
+Deepened the eleven-dimension literary mechanism framework, extraction reasoning chain, and clinical application guides. Added three-tier analytical probes (sentence/lexical, scene interaction, cross-chapter), good-versus-bad distillation contrast examples, four-dimensional character linguistic fingerprints, cross-source blend conflict resolution guidelines, and Anti-AI-Slop diagnostic guards.
+
+Added `distill-brief` to aggregate recorded chunk summaries, counterexample searches, per-dimension candidate observations with engineering strength ceilings, cross-chunk `character_notes`/`scene_notes`, and reading-memory summaries so nothing recorded during chunk extraction is lost before cross-chapter distillation. Enhanced `memory` and `prompt` with `known_subjects` and `unresolved_foreshadows` indices to track open `plant`/`advance` chains across long novels.
+
+Added `assets/diagnostic-report.schema.json`, `locate --target`, `diagnose --report-out`, and `diagnose-check` for source-and-target-backed chapter diagnosis. Diagnostic reports bind to exact DNA and normalized target SHA-256 hashes, classify issues into `logic_defect`, `mouthpiece_warning`, `style_divergence` and `aesthetic_choice`, and verify every target quote offset verbatim. Expanded the hand-curated demo and unit test suite while keeping the runtime Python 3.10+ standard-library-only and backward-compatible with v0.1.0–v0.3.0 workspaces and schemas.
+
 ## 0.3.0 — 2026-10-16
 
 Added documented Grok Build CLI and Google Antigravity IDE/app/CLI directory profiles alongside Codex and a generic explicit-path entry. New offline skill_host.py installs complete public resources without overwriting existing installs, reports read-only diagnostics, and builds reproducible ZIPs with per-file hashes. Distribution resources are explicitly allowlisted; manuscripts, workspaces, private files and host configuration are not copied.

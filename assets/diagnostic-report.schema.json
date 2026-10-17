@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "diagnostic-report",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": [
+        "1.0"
+      ]
+    },
+    "dna_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "target_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "target_characters": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "reviewed"
+      ]
+    },
+    "intensity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "balanced",
+        "exploratory"
+      ]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "review_notes": {
+      "type": "string"
+    },
+    "preserved_strengths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^D[0-9]{4,}$"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "logic_defect",
+              "style_divergence",
+              "aesthetic_choice",
+              "mouthpiece_warning"
+            ]
+          },
+          "rule_id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "quote": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "symptom": {
+            "type": "string",
+            "minLength": 1
+          },
+          "why_problematic": {
+            "type": "string",
+            "minLength": 1
+          },
+          "alternative_interpretation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minimal_fix": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "rule_id",
+          "start",
+          "end",
+          "quote",
+          "symptom",
+          "why_problematic",
+          "alternative_interpretation",
+          "minimal_fix"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "source_validation": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "verification": {
+          "type": "string",
+          "enum": [
+            "source-backed",
+            "metadata-only"
+          ]
+        },
+        "semantic_correctness": {
+          "type": "string",
+          "enum": [
+            "not machine-verified"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "reviewed"
+          ]
+        },
+        "rule_review": {
+          "type": "string",
+          "enum": [
+            "structured-declaration",
+            "legacy-unstructured"
+          ]
+        },
+        "rules": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coverage": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "source_id",
+              "read",
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "valid",
+        "verification",
+        "semantic_correctness",
+        "status",
+        "rule_review",
+        "rules",
+        "evidence",
+        "coverage"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "dna_sha256",
+    "target_sha256",
+    "target_characters",
+    "status",
+    "intensity",
+    "summary",
+    "review_notes",
+    "preserved_strengths",
+    "issues",
+    "source_validation"
+  ],
+  "additionalProperties": false
+}

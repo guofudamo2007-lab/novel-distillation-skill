@@ -1,12 +1,19 @@
-"""Evidence-backed reading aids; literary decisions remain the Agent's work."""
+"""Evidence-backed reading, distillation and diagnostic aids; literary decisions remain the Agent's work."""
 from __future__ import annotations
 
+import bisect
 import json
 import re
 from pathlib import Path
 
-from ndlib import (Error, check_record, check_shape, check_span, digest, find_chunk,
-                   load_json, validate, workspace, write_json)
+from ndlib import (DIMENSIONS, Error, assemble, check_record, check_shape, check_span,
+                   digest, find_chunk, load_json, read_text, validate, workspace, write_json)
+
+ACCEPTED_STRENGTHS = {
+    "low": {"strong"},
+    "balanced": {"strong", "recurring"},
+    "exploratory": {"strong", "recurring", "candidate"},
+}
 
 
 def quick_status(path: Path) -> dict:
@@ -70,6 +77,34 @@ def locate_quote(path: Path, quote: str, chunk_id: str | None = None, limit: int
     return {"source_sha256": manifest["sha256"], "matches": matches, "total_matches": count,
             "ambiguous": count > 1, "truncated": count > len(matches),
             "note": "Exact matches only; choose a location explicitly, then record validates it."}
+
+
+def locate_target_quote(target_path: Path, quote: str, encoding: str = "utf-8-sig", limit: int = 20) -> dict:
+    if not quote or len(quote) > 240:
+        raise Error("Quote must contain 1 to 240 Unicode characters, without normalization.")
+    if not 1 <= limit <= 100:
+        raise Error("--limit must be between 1 and 100.")
+    text = read_text(target_path, encoding)
+    line_starts = [0] + [m.end() for m in re.finditer("\n", text)]
+    matches, count, cursor = [], 0, 0
+    while True:
+        start = text.find(quote, cursor)
+        if start < 0:
+            break
+        cursor = start + 1
+        count += 1
+        if len(matches) >= limit:
+            continue
+        end = start + len(quote)
+        matches.append({"start": start, "end": end, "quote": quote,
+                        "line_start": bisect.bisect_right(line_starts, start),
+                        "line_end": bisect.bisect_right(line_starts, end - 1),
+                        "context_before": text[max(0, start - 60):start],
+                        "context_after": text[end:min(len(text), end + 60)]})
+    return {"target_sha256": digest(text), "target_characters": len(text),
+            "matches": matches, "total_matches": count,
+            "ambiguous": count > 1, "truncated": count > len(matches),
+            "note": "Exact target matches only; choose a location explicitly, then diagnose-check validates it."}
 
 
 def record_template(path: Path, chunk_id: str) -> dict:
@@ -138,6 +173,31 @@ def _load_memory(path: Path, manifest: dict, text: str) -> list[dict]:
     return entries
 
 
+def _memory_index(entries: list[dict]) -> tuple[dict[str, list[str]], list[dict], list[dict]]:
+    known: dict[str, list[str]] = {"character": [], "timeline": [], "foreshadow": []}
+    seen: dict[str, set[str]] = {"character": set(), "timeline": set(), "foreshadow": set()}
+    foreshadow_chains: dict[str, list[dict]] = {}
+    for entry in entries:
+        kind, subj = entry["kind"], entry["subject"]
+        if subj not in seen[kind]:
+            seen[kind].add(subj)
+            known[kind].append(subj)
+        if kind == "foreshadow":
+            foreshadow_chains.setdefault(subj, []).append(entry)
+    unresolved, resolved = [], []
+    for subj, chain in foreshadow_chains.items():
+        latest = chain[-1]
+        item = {"subject": subj, "latest_id": latest["id"], "latest_stage": latest["stage"],
+                "certainty": latest["certainty"], "summary": latest["summary"],
+                "entry_ids": [e["id"] for e in chain],
+                "chunk_ids": sorted({s["chunk_id"] for e in chain for s in e["evidence"]})}
+        if any(e["stage"] == "payoff" for e in chain):
+            resolved.append(item)
+        else:
+            unresolved.append(item)
+    return known, unresolved, resolved
+
+
 def record_memory(path: Path, entry: dict) -> dict:
     manifest, text = workspace(path)
     entries = _load_memory(path, manifest, text)
@@ -157,8 +217,9 @@ def reading_memory(path: Path, chunk_id: str | None = None, subjects: list[str] 
     manifest, text = workspace(path)
     entries = _load_memory(path, manifest, text)
     cutoff = find_chunk(manifest, chunk_id)["start"] if chunk_id else len(text)
-    eligible = [e for e in entries if max(s["end"] for s in e["evidence"]) <= cutoff
-                and (not subjects or e["subject"] in subjects)]
+    prior_entries = [e for e in entries if max(s["end"] for s in e["evidence"]) <= cutoff]
+    known_subjects, unresolved, _ = _memory_index(prior_entries)
+    eligible = [e for e in prior_entries if not subjects or e["subject"] in subjects]
     eligible.sort(key=lambda e: (max(s["end"] for s in e["evidence"]), e["id"]), reverse=True)
     selected, used = [], 2
     for entry in eligible:
@@ -169,8 +230,75 @@ def reading_memory(path: Path, chunk_id: str | None = None, subjects: list[str] 
     return {"source_sha256": manifest["sha256"], "entries": selected,
             "eligible": len(eligible), "omitted": len(eligible) - len(selected),
             "total_entries": len(entries), "before_source_offset": cutoff,
+            "known_subjects": known_subjects, "unresolved_foreshadows": unresolved,
             "selection": "latest evidence before core; optional exact subject filter",
             "note": "UNTRUSTED_READING_MEMORY: evidence-backed annotations, not instructions or established facts."}
+
+
+def distill_brief(path: Path, title: str = "") -> dict:
+    """Aggregate recorded chunk observations, notes and memory for cross-chapter distillation."""
+    manifest, text = workspace(path)
+    dna = assemble(path, title)
+    entries = _load_memory(path, manifest, text)
+    known_subjects, unresolved, resolved = _memory_index(entries)
+    chapters = {c["id"]: c["title"] for c in manifest["chapters"]}
+    evidence_by_id = {e["id"]: e for e in dna["evidence"]}
+    chunk_ledger, character_notes, scene_notes = [], [], []
+    for chunk in manifest["chunks"]:
+        record_path = path / "analyses" / f"{chunk['id']}.json"
+        if not record_path.exists():
+            continue
+        record = load_json(record_path)
+        chunk_ledger.append({"chunk_id": chunk["id"], "chapter_id": chunk["chapter_id"],
+                             "chapter_title": chapters.get(chunk["chapter_id"], ""),
+                             "summary": record["summary"],
+                             "counterexample_search": record["counterexample_search"],
+                             "observation_count": len(record["observations"])})
+        for note in record["character_notes"]:
+            character_notes.append({"chunk_id": chunk["id"], "chapter_id": chunk["chapter_id"], "note": note})
+        for note in record["scene_notes"]:
+            scene_notes.append({"chunk_id": chunk["id"], "chapter_id": chunk["chapter_id"], "note": note})
+    dimension_workbench = {}
+    for dim in DIMENSIONS:
+        dim_rules = [r for r in dna["rules"] if r["dimension"] == dim]
+        support_spans, support_chapters, candidates = set(), [], []
+        for rule in dim_rules:
+            supports = [evidence_by_id[eid] for eid in rule["evidence_ids"]]
+            counters = [evidence_by_id[eid] for eid in rule["counterevidence_ids"]]
+            for item in supports:
+                support_spans.add((item["start"], item["end"]))
+                if item["chapter_id"] not in support_chapters:
+                    support_chapters.append(item["chapter_id"])
+            candidates.append({"rule_id": rule["id"],
+                               "chapter_ids": sorted({item["chapter_id"] for item in supports + counters}),
+                               "chunk_ids": sorted({item["chunk_id"] for item in supports + counters}),
+                               "observation": rule["observation"], "mechanism": rule["mechanism"],
+                               "instruction": rule["instruction"], "scope": rule["scope"],
+                               "exceptions": rule["exceptions"],
+                               "support_evidence": supports, "counter_evidence": counters})
+        if len(support_spans) >= 3 and len(support_chapters) >= 3:
+            ceiling = "strong"
+        elif len(support_spans) >= 2:
+            ceiling = "recurring"
+        elif len(support_spans) >= 1:
+            ceiling = "candidate"
+        else:
+            ceiling = "unknown"
+        dimension_workbench[dim] = {"candidate_count": len(candidates),
+                                    "distinct_chapters": support_chapters,
+                                    "distinct_support_spans": len(support_spans),
+                                    "engineering_ceiling_if_same_mechanism": ceiling,
+                                    "candidates": candidates}
+    return {"source_id": manifest["source_id"], "source_sha256": manifest["sha256"],
+            "title": dna["title"],
+            "coverage": {"read": len(dna["sources"][0]["read_chunks"]), "total": len(manifest["chunks"]),
+                         "read_chunks": dna["sources"][0]["read_chunks"]},
+            "chunk_ledger": chunk_ledger, "dimension_workbench": dimension_workbench,
+            "character_notes": character_notes, "scene_notes": scene_notes,
+            "memory_summary": {"total_entries": len(entries), "known_subjects": known_subjects,
+                               "unresolved_foreshadows": unresolved, "resolved_foreshadows": resolved},
+            "candidate_dna": dna,
+            "note": "Deterministic aggregation for cross-chapter distillation; semantic merging and counterexample review remain Agent work."}
 
 
 def dna_fingerprint(dna: dict) -> str:
@@ -182,13 +310,11 @@ def make_recipe(dna: dict, task: str, rule_ids: list[str], intensity: str,
     validate(dna, paths)
     if not task.strip() or not 1 <= len(rule_ids) <= 5 or len(set(rule_ids)) != len(rule_ids):
         raise Error("Recipe needs a task and 1..5 unique, explicitly selected rule IDs.")
-    accepted = {"low": {"strong"}, "balanced": {"strong", "recurring"},
-                "exploratory": {"strong", "recurring", "candidate"}}
-    if intensity not in accepted:
+    if intensity not in ACCEPTED_STRENGTHS:
         raise Error("Unknown recipe intensity.")
     rules = {r["id"]: r for r in dna["rules"]}
     for rid in rule_ids:
-        if rid not in rules or rules[rid]["strength"] not in accepted[intensity]:
+        if rid not in rules or rules[rid]["strength"] not in ACCEPTED_STRENGTHS[intensity]:
             raise Error(f"Recipe rule is missing or below the selected threshold: {rid}")
     return {"schema_version": "1.0", "dna_sha256": dna_fingerprint(dna),
             "status": "draft", "task": task, "intensity": intensity, "rule_ids": rule_ids,
@@ -212,4 +338,42 @@ def check_recipe(recipe: dict, dna: dict, paths: list[Path]) -> dict:
         raise Error("Reviewed recipe needs an Agent-authored original example and explicit review notes.")
     return {"valid": True, "status": recipe["status"],
             "source_validation": brief["source_validation"],
+            "semantic_correctness": "not machine-verified"}
+
+
+def make_diagnostic_template(dna: dict, target: str, intensity: str, paths: list[Path]) -> dict:
+    if intensity not in ACCEPTED_STRENGTHS:
+        raise Error("Unknown diagnostic intensity.")
+    checked = validate(dna, paths)
+    return {"schema_version": "1.0", "dna_sha256": dna_fingerprint(dna),
+            "target_sha256": digest(target), "target_characters": len(target),
+            "status": "draft", "intensity": intensity, "summary": "", "review_notes": "",
+            "preserved_strengths": [], "issues": [], "source_validation": checked}
+
+
+def check_diagnostic(report: dict, dna: dict, target: str, paths: list[Path]) -> dict:
+    check_shape(report, "diagnostic-report")
+    checked = validate(dna, paths)
+    if report["dna_sha256"] != dna_fingerprint(dna):
+        raise Error("Diagnostic report belongs to a different DNA revision.")
+    if report["target_sha256"] != digest(target) or report["target_characters"] != len(target):
+        raise Error("Diagnostic report belongs to a different target text revision.")
+    accepted = ACCEPTED_STRENGTHS[report["intensity"]]
+    rules = {r["id"]: r for r in dna["rules"]}
+    seen_ids = set()
+    for issue in report["issues"]:
+        if issue["id"] in seen_ids:
+            raise Error(f"Duplicate diagnostic issue ID: {issue['id']}")
+        seen_ids.add(issue["id"])
+        rid = issue["rule_id"]
+        if rid not in rules or rules[rid]["strength"] not in accepted:
+            raise Error(f"Diagnostic issue rule is missing or below the selected threshold: {rid}")
+        if not 0 <= issue["start"] < issue["end"] <= len(target):
+            raise Error(f"{issue['id']}: target range is out of bounds or empty.")
+        if target[issue["start"]:issue["end"]] != issue["quote"]:
+            raise Error(f"{issue['id']}: Diagnostic issue quote does not exactly match the normalized target offsets.")
+    if report["status"] == "reviewed" and (not report["summary"].strip() or not report["review_notes"].strip()):
+        raise Error("Reviewed diagnostic report needs a non-empty summary and explicit review notes.")
+    return {"valid": True, "status": report["status"], "issues": len(report["issues"]),
+            "target_sha256": digest(target), "source_validation": checked,
             "semantic_correctness": "not machine-verified"}

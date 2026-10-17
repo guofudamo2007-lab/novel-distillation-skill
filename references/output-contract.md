@@ -1,53 +1,61 @@
-# 输出契约 · DNA 1.1 / 分片 1.0
+# 输出契约 · DNA 1.1 / 分片 1.0 / 诊断 1.0 · v0.4.0
 
 ## 数据契约与兼容
 
-`assets/chunk-analysis.schema.json` 定义单片段抽取（1.0）；`assets/novel-dna.schema.json` 定义最终配置（新建 1.1，兼容旧 1.0）。新增 reading-memory.schema.json 与 writing-recipe.schema.json，各自为 1.0。运行时仅用标准库校验基本类型子集，加上版本条件、关联与证据检查；不是通用 JSON Schema 引擎，不解析外部 $ref。DNA schema 里的版本条件也由显式运行时检查落实。开发测试可额外使用 jsonschema 交叉验证，但运行时不需要它。
+本项目包含五套严格 JSON Schema（位于 `assets/`）：
+- `chunk-analysis.schema.json`：单片段抽取契约（`1.0`）；
+- `novel-dna.schema.json`：最终 Novel DNA 契约（新建默认 `1.1`，只读兼容旧 `1.0`）；
+- `reading-memory.schema.json`：跨章追加式阅读记忆契约（`1.0`）；
+- `writing-recipe.schema.json`：任务级原创写作配方契约（`1.0`）；
+- `diagnostic-report.schema.json`：v0.4.0 新增的目标章节结构化临床诊断报告契约（`1.0`）。
 
-所有字段以 schema 为准；未知字段报错，不能擅自加 `score: 99` 等自创结论。标识符唯一，引用必须存在，布尔值不能冒充整数。JSON 不允许 NaN/Infinity。
+运行时仅使用 Python 标准库校验核心类型子集、版本条件、内部引用与原文证据坐标；不依赖第三方 `jsonschema` 包，不解析外部 `$ref`。所有字段以 Schema 为准，未知字段一律拒绝（`additionalProperties: false`），禁止私自添加 `score: 99` 等主观评分字段。标识符必须唯一，布尔值不能冒充整数，严禁 `NaN`/`Infinity`。
 
-不同宿主使用同一数据契约。v0.3.0 的 record --from-chat 只在显式启用时去掉单个完整外层 JSON 代码围栏；不接受解释性前后文，不推测字段别名，不修复缺失坐标或原文引用。默认 JSON 加载仍严格；不会因模型或平台不同降级现有证据门槛。缺少终端时的辅助分析不能冒充通过此契约校验的 DNA。
+不同宿主共享同一套数据契约。`record --from-chat` 仅在显式启用时剥离单层完整外层 JSON 代码围栏，不接受解释性前后文，不放宽任何证据校验门槛。
 
 ## Novel DNA 字段
 
 | 字段 | 含义 |
 |---|---|
-| schema_version / title | 固定版本与本次分析/混合配置标题 |
-| status / review_notes | draft 或 reviewed；后者要求分析者写明交叉核对与反例审查 |
-| sources | 来源 id、title、SHA-256、字符/章/片段总数、read_chunks 和明确命名的代理统计 |
-| dimensions | 必须包含全部 11 个键；每项 status、summary、rule_ids。未知维度留 unknown/空数组 |
-| rules | 可迁移规则；id、dimension、observation、mechanism、instruction、scope、strength、confidence、evidence_ids、counterevidence_ids、exceptions；1.1 另要求 review |
-| evidence | 短原文证据；id、source_id、chapter_id、chunk_id、start、end、quote、kind |
-| characters | id、label、rule_ids、notes；角色语言指纹，不是强迫所有角色统一风格 |
-| templates | name、steps、rule_ids；steps 至少两步，描述结构功能而非来源事件 |
-| exclusions / limitations | 机制层禁区与已知限制/缺失；不把未知包装成不存在 |
+| `schema_version` / `title` | 固定版本（`"1.1"` 或旧 `"1.0"`）与本次分析/混合配置标题 |
+| `status` / `review_notes` | `draft` 或 `reviewed`；后者要求分析者写明跨章核对与反例审查说明 |
+| `sources` | 来源 `id`、`title`、`sha256`、字符/章/片段总数、`read_chunks` 和明确命名的表层代理统计 |
+| `dimensions` | 必须包含全部 11 个键；每项含 `status`（`unknown`/`observed`/`distilled`）、`summary`、`rule_ids` |
+| `rules` | 可迁移规则：`id`、`dimension`、`observation`、`mechanism`、`instruction`、`scope`、`strength`、`confidence`、`evidence_ids`、`counterevidence_ids`、`exceptions`；`1.1` 另要求 `review` |
+| `evidence` | 短原文证据：`id`、`source_id`、`chapter_id`、`chunk_id`、`start`、`end`、`quote`、`kind`（`support`/`counter`） |
+| `characters` | `id`、`label`、`rule_ids`、`notes`；角色四维语用指纹，不强迫所有角色统一口吻 |
+| `templates` | `name`、`steps`（至少两步功能描述）、`rule_ids`；描述场景/章节结构功能而非原作事件 |
+| `exclusions` / `limitations` | 机制层禁区与已知限制/未读范围；不把未知包装成不存在 |
 
-来源位置信息位于 workspace 的 manifest。自工具 v0.1.1 起，manifest 新增 segmentation_version="2"；无此字段的旧工作区继续使用 v1 边界，不重编号。此字段属于工作区，不加入分析 JSON。未知切分版本被拒绝；切换规则须新建工作区，不修改旧 manifest。start/end 为归一化全文的 Unicode 字符坐标，不是片段局部位置。原文引用最多 240 个字符，范围长度必须与 quote 一致。引用少不是授权充分的证明；公开发布还需用户自行审查材料权限。
+原文坐标位于工作区的 `manifest.json`（自 v0.1.1 起新工作区锁定 `segmentation_version="2"`，旧工作区保持 `v1` 边界）。`start`/`end` 为归一化全文从 0 开始的左闭右开 Unicode 码点坐标 `[start, end)`，短引文长度 1..240 且必须与 `end - start` 严格相等。
 
-## 支持强度与置信度
+## 支持强度与置信度门槛
 
-`candidate`：局部候选，至少一个支持证据。`recurring`：至少两个不同原文范围。`strong`：至少三个不同来源章节和三个不同范围。相同快照的混合别名不算新的独立来源。标题识别可能包含卷、目录或小节，分析者必须确认是真实独立章节。工程门槛通过并不能证明语义上已充分。
+- `candidate`：局部候选，至少 1 个支持证据区间。
+- `recurring`：至少 2 个不同原文支持区间。
+- `strong`：至少来自 3 个不同来源章节且具备 3 个不同原文支持区间。
+- `confidence`：分析者判断（`low`/`medium`/`high`），`high` 仅允许与 `strong` 同时使用。`assemble` 强制从 `candidate`/`low` 起步；`distill-brief` 会计算各维度在合并同机制观察时的理论最高工程门槛（`engineering_ceiling_if_same_mechanism`）供参考，但语义合并不由脚本自动完成。
 
-confidence 为 low/medium/high，是分析者判断，不是校准概率。high 仅能与 strong 同时使用，仍需要反例与范围审查。assemble 强制从 candidate/low 开始，不自动“升分”。
+## 验证层次（Validate / Recipe-Check / Diagnose-Check）
 
-每条规则必须恰好归属于一个匹配的维度；正证据 kind=support，反证据 kind=counter。角色、模板的 rule_ids 也必须有效。reviewed 不能保留未经整理的 observed 维度，但允许如实保留 unknown。draft 可以导出，输出会标明状态。
+1. **逐条规则审查（DNA 1.1 `review`）**：
+   - 必需字段：`status`（`pending`/`reviewed`）、`checked_sources`、`counterexample_search`、`attribution`、`alternative_explanations`、`decision`。
+   - `checked_sources` 中的 `chunk_ids` 必须属于对应 `source_id` 的已读片段（`read_chunks`），且当 `review.status="reviewed"` 时必须完整覆盖该规则引用的全部正反证据所在片段。
+   - 规则晋升为 `recurring`/`strong` 或整份 DNA 设为 `reviewed` 时，要求相关规则 `review.status="reviewed"` 且四项审查说明均非空。旧版 `1.0` DNA 返回 `rule_review="legacy-unstructured"`。
+2. **阅读记忆校验（`memory-record` / `memory`）**：
+   - 绑定 `source_sha256`，连续 `M` 编号，逐字核对引文且要求所属 `chunk_id` 已有合格分析记录。返回结果附带 `known_subjects` 与 `unresolved_foreshadows` 索引。
+3. **写作配方校验（`recipe` / `recipe-check`）**：
+   - 绑定 canonical DNA JSON 的 `dna_sha256`，校验 1..5 条规则满足对应 `intensity` 门槛，`steps` 完整覆盖所选规则；`reviewed` 状态必须包含非空的 `original_example` 与 `review_notes`。
+4. **结构化章节诊断校验（`diagnose` / `diagnose-check`）**：
+   - `diagnose` 输出包含 `dna_sha256`、`target_sha256`、`target_characters` 及初始 `report_template`（也可通过 `--report-out` 导出独立模板文件）。
+   - `diagnose-check` 依据 `assets/diagnostic-report.schema.json` 验证：
+     - `dna_sha256` 与当前 DNA 完全一致，`target_sha256` 及 `target_characters` 与归一化目标章节完全一致；
+     - 每条 `issues` 具备唯一 `Dxxxx` 编号、合法的 `category`（`logic_defect` / `style_divergence` / `aesthetic_choice` / `mouthpiece_warning`）、满足当前 `intensity` 门槛的 `rule_id`；
+     - 每条 `issues` 的 `[start, end)` 与 `quote` 在归一化目标章节中逐字精确匹配；
+     - 当 `status="reviewed"` 时，`summary` 与 `review_notes` 必须非空。
+5. **元数据 vs 原文核验**：
+   - 不传 `--workspace` 时返回 `verification="metadata-only"`；传入全部来源对应的 `--workspace` 时逐字核验快照哈希、切分布局、章节/片段归属与引文，返回 `verification="source-backed"`。
 
-## 验证层次
+## 导出（Export）
 
-1.1 的 review 必需字段为 status、checked_sources、counterexample_search、attribution、alternative_explanations、decision。assemble 初始填 pending 与空审查，不替 Agent 审查。checked_sources 每项含 source_id、非空唯一 chunk_ids，必须属于该来源已读片段，不重复列来源。reviewed 要求四项文字说明非空，并覆盖支持/反证据的片段；recurring/strong 和整体 reviewed 要求逐条声明 reviewed。这验证声明完整性，不验证文学判断。旧 1.0 缺少 review 仍合法，返回 legacy-unstructured，导出明确标记；混合全部 1.1 时保持 1.1，有旧来源时保留 1.0 边界，不自动完成迁移。
-
-阅读记忆绑定 source_sha256，含连续 M 编号、类型/阶段、subject、summary、certainty、证据与先前 related_ids。追加命令验证逐字引用与关联；不能覆写已有记录，也不改变 read_chunks。详细契约见 [reading aids](reading-aids.md)。
-
-写作配方绑定 canonical DNA JSON 哈希，选择 1..5 个唯一规则。steps 覆盖选定规则；reviewed 必须有 original_example/review_notes。source_validation 是生成时快照，recipe-check 会重新校验并返回当前结果。配方流程见 [apply](apply.md)。
-
-不带 workspace：结构、枚举、引用、内部范围与强度门槛检查，结果 metadata-only。它无法确认引用是否真来自小说，不能叫“已核验原文”。
-
-带 `--workspace`（多个来源重复参数）：检查全部来源快照哈希、原文元数据、章节/片段位置、quote 逐字一致、已读覆盖。任何来源没有匹配工作目录都会失败。同一原文可以提供不同切分参数的多个工作目录；每个 DNA 来源的元数据与全部证据必须同时匹配其中一个完整工作目录，不能逐条拼用不同切分。快照按已保存的 UTF-8 字符读取，不再归一化；更改 BOM 或换行同样会触发版本不匹配。read_chunks 表示已提交分析的声明，不是程序能证明模型读懂了内容。
-
-人工作业最后仍需检查：证据与结论的关联、反例是否充分、人物归属、真正章节独立性、指令是否夹带专名/原句/恶意命令。验证器不证明文学正确、原创性或法律合规。
-
-## 导出
-
-`export` 写五个新文件：quick-profile.md、deep-analysis.md、novel-dna.json、style-bible.md、writing-constraints.md。Markdown 研究报告默认只列证据坐标，JSON 含短引文。输出目录必须不存在，避免覆写用户文件。四份 Markdown 均附 review_notes 与 limitations，并从 read_chunks/total_chunks 自动判断是否部分覆盖；即使 status=reviewed 或 limitations 为空，也不会把部分阅读标成全文完成。未填写审查或限制时显示未知，不补造分析。文件名 deep-analysis.md 不等于已执行 Deep 全文阅读。
-
-balanced 默认只采纳 recurring/strong；low 仅 strong；exploratory 也含 candidate。脚本按强度过滤，不凭空改变句法比例。候选不足时 constraints 会明确说明暂无合格规则，而不是生成空壳后宣称完成。
+`export` 在全新的输出目录生成五份交付物：`quick-profile.md`、`deep-analysis.md`、`novel-dna.json`、`style-bible.md`、`writing-constraints.md`。所有四份 Markdown 均强制携带 `review_notes`、`limitations` 与根据 `read_chunks/total_chunks` 自动计算的覆盖率声明，绝不将局部采样渲染为全书读完。
